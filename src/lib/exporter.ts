@@ -125,9 +125,11 @@ export async function publishToBufferApi(
   try {
     const res = await fetch('/api/buffer', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${config.bufferApiKey.trim()}`,
+      },
       body: JSON.stringify({
-        token: config.bufferApiKey,
         profileId: profileId,
         text: text,
         mediaUrls: mediaUrls,

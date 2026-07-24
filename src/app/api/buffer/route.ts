@@ -4,17 +4,19 @@ const BUFFER_GRAPHQL_ENDPOINT = 'https://api.buffer.com';
 
 // GET: Testar Conexão com a API do Buffer e listar Perfis / Canais
 export async function GET(req: NextRequest) {
-  const { searchParams } = new URL(req.url);
-  const token = searchParams.get('token');
+  const authHeader = req.headers.get('authorization');
+  const token = authHeader?.startsWith('Bearer ') 
+    ? authHeader.substring(7).trim() 
+    : null;
 
-  if (!token || token.trim() === '') {
+  if (!token) {
     return NextResponse.json(
-      { error: 'Por favor, insira o seu Personal Access Token do Buffer.' },
+      { error: 'Por favor, insira o seu Personal Access Token do Buffer no cabeçalho Authorization.' },
       { status: 400 }
     );
   }
 
-  const cleanToken = token.trim();
+  const cleanToken = token;
   let allProfiles: any[] = [];
   const profileIdsSeen = new Set<string>();
 
@@ -160,9 +162,14 @@ export async function GET(req: NextRequest) {
 // POST: Publicar Post ou Criar Ideia via GraphQL / REST do Buffer
 export async function POST(req: NextRequest) {
   try {
+    const authHeader = req.headers.get('authorization');
+    const headerToken = authHeader?.startsWith('Bearer ') 
+      ? authHeader.substring(7).trim() 
+      : null;
+
     const body = await req.json();
     const {
-      token,
+      token: bodyToken,
       profileId,
       organizationId,
       title,
@@ -173,9 +180,11 @@ export async function POST(req: NextRequest) {
       network = 'instagram',
     } = body;
 
+    const rawToken = headerToken || bodyToken;
+
     console.log('[Buffer API POST] Recebida requisição:', {
-      hasToken: !!token,
-      tokenLength: token?.length,
+      hasToken: !!rawToken,
+      tokenLength: rawToken?.length,
       profileId,
       organizationId,
       action,
@@ -184,12 +193,15 @@ export async function POST(req: NextRequest) {
       mediaUrlsCount: mediaUrls.length,
     });
 
-    if (!token || token.trim() === '') {
+    if (!rawToken || rawToken.trim() === '') {
       console.warn('[Buffer API POST] Token ausente.');
-      return NextResponse.json({ error: 'Token do Buffer é obrigatório.' }, { status: 400 });
+      return NextResponse.json(
+        { error: 'Por favor, insira o seu Personal Access Token do Buffer no cabeçalho Authorization.' },
+        { status: 400 }
+      );
     }
 
-    const cleanToken = token.trim();
+    const cleanToken = rawToken.trim();
 
     // 1. Ação Idea (GraphQL createIdea)
     if (action === 'idea') {

@@ -61,12 +61,6 @@ export const TemplateA: React.FC<TemplateAProps> = ({ slide, profile }) => {
       <div className="flex-1 flex flex-col justify-center px-5 py-3 overflow-hidden">
         {renderFormattedText(content)}
       </div>
-
-      <div className="px-4 pb-3 text-right">
-        <span className="text-xs text-gray-300 font-semibold tracking-wider uppercase">
-          Bliip Slide
-        </span>
-      </div>
     </div>
   );
 };

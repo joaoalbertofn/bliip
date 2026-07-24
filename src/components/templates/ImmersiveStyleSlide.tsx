@@ -1,12 +1,16 @@
 import React from 'react';
 import { Slide, UserProfile } from '@/types/carousel';
+import { getSlideTheme } from '@/lib/themes';
+import { InteractiveImageContainer } from '../InteractiveImageContainer';
 
 interface ImmersiveStyleSlideProps {
   slide: Slide;
   profile: UserProfile;
+  onImageTransform?: (imageIndex: number, transform: { scale?: number; offsetX?: number; offsetY?: number }) => void;
+  onSelectImage?: (imageIndex: number) => void;
 }
 
-export const ImmersiveStyleSlide: React.FC<ImmersiveStyleSlideProps> = ({ slide, profile }) => {
+export const ImmersiveStyleSlide: React.FC<ImmersiveStyleSlideProps> = ({ slide, profile, onImageTransform, onSelectImage }) => {
   const quoteLayer = slide.layers.text?.find((t) => t.role === 'quote' || t.role === 'body');
   const signatureLayer = slide.layers.text?.find((t) => t.role === 'signature');
   const images = slide.layers.images || [];
@@ -16,102 +20,116 @@ export const ImmersiveStyleSlide: React.FC<ImmersiveStyleSlideProps> = ({ slide,
   const isHorizontal = slide.imageLayout === 'horizontal';
   const contentType = slide.contentType || (slide.templateId === 'template_a' ? 'text_only' : slide.templateId === 'template_c' ? 'text_2_images' : 'text_1_image');
 
-  // CASO 1: Apenas Texto no Estilo Imersivo (Círculo de Perfil + Texto + Assinatura totalmente centralizados no meio da tela)
-  if (contentType === 'text_only') {
-    const isDarkBg = slide.background === '#0f172a';
-    const textColorClass = isDarkBg ? 'text-white' : 'text-gray-900';
-    const sigColorClass = isDarkBg ? 'text-white/90' : 'text-gray-800';
-    const subTextColorClass = isDarkBg ? 'text-white/80' : 'text-gray-600';
+  // Obter o tema de cores ativo
+  const theme = getSlideTheme(slide.theme, slide.background);
 
+  const processMarkTags = (htmlText: string) => {
+    if (!htmlText) return htmlText;
+    return htmlText.replace(
+      /<mark([^>]*)>/g,
+      `<mark style="background-color: ${theme.markBg}; color: ${theme.markText}; padding: 2px 6px; border-radius: 4px; font-weight: 600;">`
+    );
+  };
+
+  const customFontSize = slide.fontSize ?? (isLongText ? 22 : 26);
+
+  // CASO 1: Apenas Texto no Estilo Imersivo
+  if (contentType === 'text_only') {
     return (
       <div
-        className="w-full h-full flex flex-col items-center justify-center text-center px-10 py-10 relative overflow-hidden"
-        style={{ backgroundColor: slide.background || '#ffffff' }}
+        className="w-full h-full flex flex-col items-center justify-between text-center px-10 py-10 relative overflow-hidden transition-colors duration-200"
+        style={{ backgroundColor: theme.bg }}
       >
-        {/* Bloco Centralizado Vertical e Horizontalmente */}
-        <div className="my-auto flex flex-col items-center justify-center gap-6 max-w-lg z-10 w-full">
-          {/* Círculo de Perfil Badge */}
-          <div className="flex flex-col items-center gap-2">
-            <div className="w-20 h-20 rounded-full bg-white p-1 shadow-2xl border-2 border-gray-100 flex items-center justify-center">
-              <img
-                src={profile.avatarUrl || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=200'}
-                alt={profile.name}
-                className="w-full h-full rounded-full object-cover"
-              />
-            </div>
-            <span className={`text-xs font-bold tracking-widest uppercase ${subTextColorClass}`}>
-              {profile.name}
-            </span>
+        {/* Avatar no topo (sem nome duplicado abaixo) */}
+        <div className="pt-2 flex flex-col items-center z-10">
+          <div
+            className="w-20 h-20 rounded-full p-1 shadow-2xl border flex items-center justify-center"
+            style={{ backgroundColor: theme.cardBg, borderColor: theme.borderColor }}
+          >
+            <img
+              src={profile.avatarUrl || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=200'}
+              alt={profile.name}
+              className="w-full h-full rounded-full object-cover"
+            />
           </div>
+        </div>
 
-          {/* Texto Inspiracional Centralizado */}
+        {/* Citação no meio */}
+        <div className="my-auto max-w-lg z-10 w-full py-4">
           {quoteText ? (
             <p
-              className={`leading-relaxed font-serif ${textColorClass} ${
-                isLongText ? 'text-xl' : 'text-2xl font-medium'
-              }`}
-              dangerouslySetInnerHTML={{ __html: quoteText }}
+              className="leading-relaxed font-serif font-medium"
+              style={{ color: theme.text, fontSize: `${customFontSize}px` }}
+              dangerouslySetInnerHTML={{ __html: processMarkTags(quoteText) }}
             />
           ) : (
-            <p className="text-gray-400 italic text-xl font-serif">
+            <p className="italic text-xl font-serif opacity-50" style={{ color: theme.textSecondary }}>
               "Digite a citação imersiva..."
             </p>
           )}
-
-          {/* Assinatura Manuscrita no Rodapé */}
-          {!isLongText && (
-            <div className="pt-2">
-              <span className={`font-handwriting text-3xl tracking-wider font-semibold italic ${sigColorClass}`}>
-                {signatureLayer?.content || profile.name}
-              </span>
-            </div>
-          )}
         </div>
+
+        {/* Assinatura do autor na parte inferior */}
+        {!isLongText && (
+          <div className="pb-2 z-10">
+            <span className="font-handwriting text-3xl tracking-wider font-semibold italic" style={{ color: theme.text }}>
+              {signatureLayer?.content || profile.name}
+            </span>
+          </div>
+        )}
       </div>
     );
   }
 
-  // CASO 2: Texto + 1 ou 2 Imagens no Estilo Imersivo (Foto no topo + Círculo Badge na divisória + Texto embaixo)
+  // CASO 2: Texto + 1 ou 2 Imagens no Estilo Imersivo
   return (
     <div
-      className="w-full h-full flex flex-col relative overflow-hidden"
-      style={{ backgroundColor: slide.background || '#ffffff' }}
+      className="w-full h-full flex flex-col relative overflow-hidden transition-colors duration-200"
+      style={{ backgroundColor: theme.bg }}
     >
       {/* Top Image Section (~58% height) */}
       <div className="h-[58%] w-full relative bg-gray-900 overflow-hidden shrink-0">
         {contentType === 'text_1_image' && (
-          images[0]?.source.url ? (
-            <img src={images[0].source.url} alt="Foto" className="w-full h-full object-cover" />
-          ) : (
-            <div className="w-full h-full flex items-center justify-center text-gray-400 bg-slate-800 text-sm">
-              Upload de imagem
-            </div>
-          )
+          <InteractiveImageContainer
+            imageLayer={images[0]}
+            imageIndex={0}
+            onImageTransform={onImageTransform}
+            onSelect={onSelectImage}
+            className="w-full h-full rounded-none border-none group"
+            cardBg="#0f172a"
+          />
         )}
 
         {contentType === 'text_2_images' && (
           <div className={`w-full h-full flex ${isHorizontal ? 'flex-row' : 'flex-col'} gap-1`}>
-            <div className="flex-1 h-full bg-slate-800 relative overflow-hidden">
-              {images[0]?.source.url ? (
-                <img src={images[0].source.url} alt="Img 1" className="w-full h-full object-cover" />
-              ) : (
-                <div className="w-full h-full flex items-center justify-center text-gray-400 text-xs">Foto 1</div>
-              )}
-            </div>
-            <div className="flex-1 h-full bg-slate-800 relative overflow-hidden">
-              {images[1]?.source.url ? (
-                <img src={images[1].source.url} alt="Img 2" className="w-full h-full object-cover" />
-              ) : (
-                <div className="w-full h-full flex items-center justify-center text-gray-400 text-xs">Foto 2</div>
-              )}
-            </div>
+            <InteractiveImageContainer
+              imageLayer={images[0]}
+              imageIndex={0}
+              onImageTransform={onImageTransform}
+              onSelect={onSelectImage}
+              className="flex-1 h-full rounded-none border-none group"
+              fallbackText="Foto 1"
+              cardBg="#0f172a"
+            />
+            <InteractiveImageContainer
+              imageLayer={images[1]}
+              imageIndex={1}
+              onImageTransform={onImageTransform}
+              onSelect={onSelectImage}
+              className="flex-1 h-full rounded-none border-none group"
+              fallbackText="Foto 2"
+              cardBg="#0f172a"
+            />
           </div>
         )}
       </div>
 
-      {/* Profile Badge in the exact center line between top section & bottom section */}
+      {/* Profile Badge na linha divisória */}
       <div className="absolute top-[58%] left-1/2 -translate-x-1/2 -translate-y-1/2 z-20">
-        <div className="w-20 h-20 rounded-full bg-white p-1.5 shadow-xl border-2 border-gray-100 flex items-center justify-center">
+        <div
+          className="w-20 h-20 rounded-full p-1.5 shadow-xl border flex items-center justify-center"
+          style={{ backgroundColor: theme.cardBg, borderColor: theme.borderColor }}
+        >
           <img
             src={profile.avatarUrl || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=200'}
             alt={profile.name}
@@ -121,18 +139,20 @@ export const ImmersiveStyleSlide: React.FC<ImmersiveStyleSlideProps> = ({ slide,
       </div>
 
       {/* Bottom Section */}
-      <div className="flex-1 w-full bg-white pt-12 pb-4 px-6 flex flex-col justify-between items-center text-center">
+      <div
+        className="flex-1 w-full pt-12 pb-4 px-6 flex flex-col justify-between items-center text-center"
+        style={{ backgroundColor: theme.bg }}
+      >
         {/* Quote Content */}
         <div className="my-auto max-w-lg">
           {quoteText ? (
             <p
-              className={`text-gray-900 leading-relaxed font-serif ${
-                isLongText ? 'text-lg' : 'text-2xl font-medium'
-              }`}
-              dangerouslySetInnerHTML={{ __html: quoteText }}
+              className="leading-relaxed font-serif font-medium"
+              style={{ color: theme.text, fontSize: `${customFontSize}px` }}
+              dangerouslySetInnerHTML={{ __html: processMarkTags(quoteText) }}
             />
           ) : (
-            <p className="text-gray-400 italic text-xl font-serif">
+            <p className="italic text-xl font-serif opacity-50" style={{ color: theme.textSecondary }}>
               "Digite o texto explicativo ou citação..."
             </p>
           )}
@@ -141,7 +161,7 @@ export const ImmersiveStyleSlide: React.FC<ImmersiveStyleSlideProps> = ({ slide,
         {/* Signature */}
         {!isLongText && (
           <div className="pt-1">
-            <span className="font-handwriting text-3xl text-gray-800 tracking-wider font-semibold italic">
+            <span className="font-handwriting text-3xl tracking-wider font-semibold italic" style={{ color: theme.text }}>
               {signatureLayer?.content || profile.name}
             </span>
           </div>

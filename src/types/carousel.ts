@@ -1,3 +1,5 @@
+import { SlideTheme } from '@/lib/themes';
+
 export type ImageSource = 
   | { type: "upload"; url: string }
   | { type: "ai_generated"; provider: string; prompt: string; url: string }
@@ -14,6 +16,9 @@ export type ImageLayer = {
   id: string;
   source: ImageSource;
   position: "top" | "bottom" | "center" | "background";
+  scale?: number;     // Fator de zoom: 1.0 a 3.0 (default: 1.0)
+  offsetX?: number;   // Deslocamento X em % (default: 0)
+  offsetY?: number;   // Deslocamento Y em % (default: 0)
 };
 
 export type ContentType = "text_only" | "text_1_image" | "text_2_images";
@@ -25,6 +30,8 @@ export type Slide = {
   layoutStyle: LayoutStyle;
   imageLayout?: "vertical" | "horizontal"; // Orientação para 2 imagens
   templateId?: string; // compatibilidade
+  theme?: SlideTheme;
+  fontSize?: number; // Tamanho da fonte em px (ex: 14 a 48)
   layers: {
     text?: TextLayer[];
     images?: ImageLayer[];

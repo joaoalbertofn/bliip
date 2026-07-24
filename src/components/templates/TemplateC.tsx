@@ -60,12 +60,6 @@ export const TemplateC: React.FC<TemplateCProps> = ({ slide, profile }) => {
           </div>
         </div>
       </div>
-
-      <div className="px-4 pb-3 text-right shrink-0">
-        <span className="text-xs text-gray-300 font-semibold tracking-wider uppercase">
-          Bliip Slide
-        </span>
-      </div>
     </div>
   );
 };

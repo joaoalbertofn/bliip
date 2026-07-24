@@ -46,7 +46,11 @@ export const IntegrationsModal: React.FC<IntegrationsModalProps> = ({ isOpen, on
       setIsLoadingProfiles(true);
       setTestStatus(null);
 
-      const res = await fetch(`/api/buffer?token=${encodeURIComponent(token.trim())}`);
+      const res = await fetch('/api/buffer', {
+        headers: {
+          'Authorization': `Bearer ${token.trim()}`,
+        },
+      });
       const data = await res.json();
 
       if (res.ok && data.profiles) {
