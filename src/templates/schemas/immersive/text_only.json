@@ -1,0 +1,17 @@
+{
+  "id": "immersive_text_only",
+  "styleGroup": "immersive",
+  "contentType": "text_only",
+  "name": "Imersivo / Citação - Apenas Texto",
+  "container": {
+    "layout": "centered_card",
+    "padding": "p-10",
+    "justifyContent": "center",
+    "gap": "gap-6"
+  },
+  "blocks": [
+    { "type": "badge_icon" },
+    { "type": "quote_text" },
+    { "type": "signature_text" }
+  ]
+}

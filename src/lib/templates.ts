@@ -45,6 +45,16 @@ export const LAYOUT_STYLES: Record<LayoutStyle, LayoutStyleDefinition> = {
     name: 'Estilo Imersivo (Sadhguru)',
     description: 'Imagens ou fundo em tela cheia, círculo de perfil badge e tipografia marcante.',
   },
+  comparison: {
+    id: 'comparison',
+    name: 'Estilo Comparativo (Pedro Moreira)',
+    description: 'Ideal para comparações (Antes/Depois ou Primeiro/Depois) com rótulos de fotos.',
+  },
+  news_article: {
+    id: 'news_article',
+    name: 'Estilo Notícias (Kraken / Bitcoin)',
+    description: 'Visual editorial estilo manchete de notícias de mercado com destaques.',
+  },
 };
 
 // Aliases para compatibilidade

@@ -1,0 +1,16 @@
+{
+  "id": "immersive_text_2_images",
+  "styleGroup": "immersive",
+  "contentType": "text_2_images",
+  "name": "Imersivo / Citação - Texto + 2 Fotos",
+  "container": {
+    "layout": "split_top_bottom",
+    "padding": "p-0",
+    "justifyContent": "between"
+  },
+  "blocks": [
+    { "type": "dual_image" },
+    { "type": "quote_text" },
+    { "type": "signature_text" }
+  ]
+}

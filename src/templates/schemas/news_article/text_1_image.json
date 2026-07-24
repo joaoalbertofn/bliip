@@ -1,0 +1,17 @@
+{
+  "id": "news_article_text_1_image",
+  "styleGroup": "news_article",
+  "contentType": "text_1_image",
+  "name": "Notícias - Foto no Topo + Título + Texto",
+  "container": {
+    "layout": "flex_col",
+    "padding": "p-6",
+    "justifyContent": "start",
+    "gap": "gap-3"
+  },
+  "blocks": [
+    { "type": "single_image" },
+    { "type": "title_text" },
+    { "type": "body_text" }
+  ]
+}

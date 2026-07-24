@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Carousel, UserProfile } from '@/types/carousel';
 import { AVAILABLE_SOCIAL_FORMATS, SocialFormatOption } from '@/types/socialFormats';
 import { exportElementToPng, downloadDataUrl, exportCarouselToZip, triggerWebhookIntegration, publishToBufferApi } from '@/lib/exporter';
@@ -24,12 +24,24 @@ export const ExportModal: React.FC<ExportModalProps> = ({
   allSlideElements,
   onMarkAsSent,
 }) => {
-  const [selectedFormatId, setSelectedFormatId] = useState<string>('instagram_carousel');
+  const [selectedFormatId, setSelectedFormatId] = useState<string>(() => 
+    carousel?.slides?.length <= 1 ? 'instagram_post' : 'instagram_carousel'
+  );
   const [isExportingZip, setIsExportingZip] = useState(false);
   const [isExportingSingle, setIsExportingSingle] = useState(false);
   const [isSendingWebhook, setIsSendingWebhook] = useState(false);
   const [isPublishingBuffer, setIsPublishingBuffer] = useState(false);
   const [statusMessage, setStatusMessage] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (isOpen) {
+      if (carousel?.slides?.length <= 1) {
+        setSelectedFormatId('instagram_post');
+      } else {
+        setSelectedFormatId('instagram_carousel');
+      }
+    }
+  }, [isOpen, carousel?.slides?.length]);
 
   if (!isOpen) return null;
 

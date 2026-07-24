@@ -1,0 +1,17 @@
+{
+  "id": "twitter_text_2_images",
+  "styleGroup": "twitter",
+  "contentType": "text_2_images",
+  "name": "Twitter / Post - Texto + 2 Fotos",
+  "container": {
+    "layout": "flex_col",
+    "padding": "p-6",
+    "justifyContent": "between",
+    "gap": "gap-3"
+  },
+  "blocks": [
+    { "type": "profile_header" },
+    { "type": "body_text" },
+    { "type": "dual_image" }
+  ]
+}

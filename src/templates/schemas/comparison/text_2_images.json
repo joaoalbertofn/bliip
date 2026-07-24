@@ -1,0 +1,20 @@
+{
+  "id": "comparison_text_2_images",
+  "styleGroup": "comparison",
+  "contentType": "text_2_images",
+  "name": "Comparativo Antes/Depois (Ex: Pedro Moreira)",
+  "container": {
+    "layout": "flex_col",
+    "padding": "p-6",
+    "justifyContent": "between",
+    "gap": "gap-3"
+  },
+  "blocks": [
+    { "type": "profile_header" },
+    { "type": "title_text" },
+    {
+      "type": "dual_image",
+      "imageCaptions": ["Primeiro a comida", "Depois a sobremesa"]
+    }
+  ]
+}

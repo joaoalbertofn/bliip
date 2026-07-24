@@ -1,19 +1,16 @@
 import React, { forwardRef } from 'react';
 import { Slide, UserProfile } from '@/types/carousel';
-import { TwitterStyleSlide } from './templates/TwitterStyleSlide';
-import { ImmersiveStyleSlide } from './templates/ImmersiveStyleSlide';
+import { DynamicSlideRenderer } from './DynamicSlideRenderer';
 
 interface SlideCanvasProps {
   slide: Slide;
   profile: UserProfile;
   aspectRatio?: '4:5' | '1:1';
   onImageTransform?: (imageIndex: number, transform: { scale?: number; offsetX?: number; offsetY?: number }) => void;
-  onSelectImage?: (imageIndex: number) => void;
 }
 
 export const SlideCanvas = forwardRef<HTMLDivElement, SlideCanvasProps>(
-  ({ slide, profile, aspectRatio = '4:5', onImageTransform, onSelectImage }, ref) => {
-    const isImmersive = slide.layoutStyle === 'immersive';
+  ({ slide, profile, aspectRatio = '4:5', onImageTransform }, ref) => {
     const heightClass = aspectRatio === '1:1' ? 'aspect-square' : 'aspect-[4/5]';
 
     return (
@@ -21,13 +18,13 @@ export const SlideCanvas = forwardRef<HTMLDivElement, SlideCanvasProps>(
         <div
           ref={ref}
           id={`slide_canvas_${slide.id}`}
-          className={`w-[440px] ${heightClass} bg-white rounded-2xl shadow-2xl overflow-hidden border border-slate-700/50 relative shrink-0 transition-all duration-300`}
+          className={`w-full max-w-[460px] ${heightClass} bg-white rounded-2xl shadow-2xl overflow-hidden border border-slate-700/50 relative shrink-0 transition-all duration-300`}
         >
-          {isImmersive ? (
-            <ImmersiveStyleSlide slide={slide} profile={profile} onImageTransform={onImageTransform} onSelectImage={onSelectImage} />
-          ) : (
-            <TwitterStyleSlide slide={slide} profile={profile} onImageTransform={onImageTransform} onSelectImage={onSelectImage} />
-          )}
+          <DynamicSlideRenderer
+            slide={slide}
+            profile={profile}
+            onImageTransform={onImageTransform}
+          />
         </div>
       </div>
     );

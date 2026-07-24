@@ -1,0 +1,17 @@
+{
+  "id": "twitter_text_1_image",
+  "styleGroup": "twitter",
+  "contentType": "text_1_image",
+  "name": "Twitter / Post - Texto + 1 Foto",
+  "container": {
+    "layout": "flex_col",
+    "padding": "p-6",
+    "justifyContent": "between",
+    "gap": "gap-3"
+  },
+  "blocks": [
+    { "type": "profile_header" },
+    { "type": "body_text" },
+    { "type": "single_image" }
+  ]
+}

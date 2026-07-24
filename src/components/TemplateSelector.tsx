@@ -54,10 +54,14 @@ export const TemplateSelector: React.FC<TemplateSelectorProps> = ({
                   <span className="text-xs font-bold text-slate-100 flex items-center gap-1.5">
                     {style.id === 'twitter' ? (
                       <Twitter className="w-3.5 h-3.5 text-sky-400" />
+                    ) : style.id === 'comparison' ? (
+                      <Layers className="w-3.5 h-3.5 text-emerald-400" />
+                    ) : style.id === 'news_article' ? (
+                      <FileText className="w-3.5 h-3.5 text-amber-400" />
                     ) : (
                       <Sparkles className="w-3.5 h-3.5 text-rose-400" />
                     )}
-                    <span>{style.name.split(' ')[1]}</span>
+                    <span>{style.name}</span>
                   </span>
                   {isSelected && <span className="w-2 h-2 rounded-full bg-indigo-400 animate-pulse" />}
                 </div>
@@ -80,16 +84,22 @@ export const TemplateSelector: React.FC<TemplateSelectorProps> = ({
         <div className="grid grid-cols-3 gap-1.5">
           {Object.values(CONTENT_TYPES).map((type) => {
             const isSelected = type.id === currentContentType;
+            const isDisabled = currentLayoutStyle === 'comparison' && type.id !== 'text_2_images';
+
             return (
               <button
                 key={type.id}
                 type="button"
-                onClick={() => onSelectContentType(type.id)}
+                disabled={isDisabled}
+                onClick={() => !isDisabled && onSelectContentType(type.id)}
                 className={`p-2.5 rounded-xl border text-center flex flex-col items-center justify-center gap-1 transition ${
-                  isSelected
+                  isDisabled
+                    ? 'opacity-30 border-slate-800 bg-slate-950 text-slate-600 cursor-not-allowed'
+                    : isSelected
                     ? 'border-amber-500 bg-amber-950/30 shadow-glow ring-1 ring-amber-500/50 text-white font-bold'
                     : 'border-slate-800 bg-slate-900/60 hover:bg-slate-800 text-slate-400'
                 }`}
+                title={isDisabled ? 'O estilo comparativo requer 2 imagens' : type.name}
               >
                 {getContentIcon(type.id)}
                 <span className="text-[11px] leading-tight">{type.name}</span>

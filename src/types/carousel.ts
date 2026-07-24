@@ -9,7 +9,7 @@ export type TextLayer = {
   id: string;
   content: string; // Suporta HTML com <mark> ou texto simples
   highlights?: { start: number; end: number }[];
-  role: "body" | "quote" | "signature" | "dialogue";
+  role: "body" | "quote" | "signature" | "dialogue" | "title";
 };
 
 export type ImageLayer = {
@@ -22,7 +22,7 @@ export type ImageLayer = {
 };
 
 export type ContentType = "text_only" | "text_1_image" | "text_2_images";
-export type LayoutStyle = "twitter" | "immersive";
+export type LayoutStyle = "twitter" | "immersive" | "comparison" | "news_article";
 
 export type Slide = {
   id: string;
@@ -31,6 +31,7 @@ export type Slide = {
   imageLayout?: "vertical" | "horizontal"; // Orientação para 2 imagens
   templateId?: string; // compatibilidade
   theme?: SlideTheme;
+  title?: string;
   fontSize?: number; // Tamanho da fonte em px (ex: 14 a 48)
   layers: {
     text?: TextLayer[];

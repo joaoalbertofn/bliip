@@ -1,0 +1,16 @@
+{
+  "id": "twitter_text_only",
+  "styleGroup": "twitter",
+  "contentType": "text_only",
+  "name": "Twitter / Post - Apenas Texto",
+  "container": {
+    "layout": "centered_card",
+    "padding": "p-6",
+    "justifyContent": "center",
+    "gap": "gap-4"
+  },
+  "blocks": [
+    { "type": "profile_header" },
+    { "type": "body_text" }
+  ]
+}

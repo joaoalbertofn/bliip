@@ -191,7 +191,14 @@ export function useCarouselState(profile: UserProfile) {
   };
 
   const handleSelectLayoutStyle = (layoutStyle: LayoutStyle) => {
-    updateActiveSlide((prev) => ({ ...prev, layoutStyle }));
+    updateActiveSlide((prev) => {
+      const isComparison = layoutStyle === 'comparison';
+      return {
+        ...prev,
+        layoutStyle,
+        contentType: isComparison ? 'text_2_images' : prev.contentType,
+      };
+    });
   };
 
   const handleTextChange = (textIndex: number, newContent: string) => {

@@ -1,0 +1,17 @@
+{
+  "id": "news_article_text_2_images",
+  "styleGroup": "news_article",
+  "contentType": "text_2_images",
+  "name": "Notícias - 2 Fotos no Topo + Título + Texto",
+  "container": {
+    "layout": "flex_col",
+    "padding": "p-6",
+    "justifyContent": "start",
+    "gap": "gap-3"
+  },
+  "blocks": [
+    { "type": "dual_image" },
+    { "type": "title_text" },
+    { "type": "body_text" }
+  ]
+}

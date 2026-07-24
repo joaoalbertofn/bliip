@@ -287,16 +287,37 @@ export default function BliipApp() {
                 </div>
               </div>
             ) : (
-              <div>
-                <label className="block text-xs font-semibold text-slate-300 mb-1.5">
-                  Texto Principal (Suporta Diálogo e Destaques)
-                </label>
-                <HighlightTextEditor
-                  value={activeSlide.layers.text?.[0]?.content || ''}
-                  onChange={(text) => handleTextChange(0, text)}
-                  placeholder="Escreva seu post aqui... Use formato 'Pessoa: Fala' para diálogos."
-                  rows={6}
-                />
+              <div className="flex flex-col gap-3">
+                {(activeSlide.layoutStyle === 'news_article' || activeSlide.layoutStyle === 'comparison') && (
+                  <div>
+                    <label className="block text-xs font-semibold text-slate-300 mb-1.5">
+                      Título / Manchete (Caixa Alta / Destaque)
+                    </label>
+                    <input
+                      type="text"
+                      value={activeSlide.title || ''}
+                      onChange={(e) => updateActiveSlide((prev) => ({ ...prev, title: e.target.value }))}
+                      placeholder={
+                        activeSlide.layoutStyle === 'news_article'
+                          ? 'MAS O PROCESSO NÃO SE RESUME A CORTAR.'
+                          : 'Digite o título da comparação...'
+                      }
+                      className="w-full bg-slate-800 border border-slate-700 rounded-xl p-3 text-sm font-semibold text-white focus:outline-none focus:border-indigo-500"
+                    />
+                  </div>
+                )}
+
+                <div>
+                  <label className="block text-xs font-semibold text-slate-300 mb-1.5">
+                    Texto Principal (Suporta Diálogo e Destaques)
+                  </label>
+                  <HighlightTextEditor
+                    value={activeSlide.layers.text?.[0]?.content || ''}
+                    onChange={(text) => handleTextChange(0, text)}
+                    placeholder="Escreva seu post aqui... Use formato 'Pessoa: Fala' para diálogos."
+                    rows={activeSlide.layoutStyle === 'news_article' ? 4 : 5}
+                  />
+                </div>
               </div>
             )}
 
@@ -635,7 +656,6 @@ export default function BliipApp() {
                 profile={profile}
                 aspectRatio={activeCarousel.aspectRatio || '4:5'}
                 onImageTransform={handleImageTransform}
-                onSelectImage={(idx) => setSelectedImageIndex(idx)}
               />
             </div>
           </div>

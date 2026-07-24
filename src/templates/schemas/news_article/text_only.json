@@ -1,0 +1,16 @@
+{
+  "id": "news_article_text_only",
+  "styleGroup": "news_article",
+  "contentType": "text_only",
+  "name": "Notícias - Título + Texto",
+  "container": {
+    "layout": "flex_col",
+    "padding": "p-6",
+    "justifyContent": "start",
+    "gap": "gap-4"
+  },
+  "blocks": [
+    { "type": "title_text" },
+    { "type": "body_text" }
+  ]
+}
