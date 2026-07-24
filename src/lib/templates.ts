@@ -37,22 +37,22 @@ export const CONTENT_TYPES: Record<ContentType, ContentTypeDefinition> = {
 export const LAYOUT_STYLES: Record<LayoutStyle, LayoutStyleDefinition> = {
   twitter: {
     id: 'twitter',
-    name: 'Estilo Twitter (Perini)',
+    name: 'Twitter',
     description: 'Fundo claro com cabeçalho de perfil, selo azul e visual de post de rede social.',
   },
   immersive: {
     id: 'immersive',
-    name: 'Estilo Imersivo (Sadhguru)',
+    name: 'Immersive',
     description: 'Imagens ou fundo em tela cheia, círculo de perfil badge e tipografia marcante.',
   },
   comparison: {
     id: 'comparison',
-    name: 'Estilo Comparativo (Pedro Moreira)',
+    name: 'Comparativo',
     description: 'Ideal para comparações (Antes/Depois ou Primeiro/Depois) com rótulos de fotos.',
   },
   news_article: {
     id: 'news_article',
-    name: 'Estilo Notícias (Kraken / Bitcoin)',
+    name: 'Notícia',
     description: 'Visual editorial estilo manchete de notícias de mercado com destaques.',
   },
 };

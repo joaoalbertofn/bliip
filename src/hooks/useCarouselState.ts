@@ -384,6 +384,108 @@ export function useCarouselState(profile: UserProfile) {
     setActiveSlideIndex(toIndex);
   };
 
+  const handleUploadMediaToTray = (files: FileList | File[]) => {
+    const fileArray = Array.from(files);
+    if (fileArray.length === 0) return;
+
+    const readPromises = fileArray.map(
+      (file) =>
+        new Promise<string>((resolve) => {
+          const reader = new FileReader();
+          reader.onload = (e) => resolve(e.target?.result as string);
+          reader.readAsDataURL(file);
+        })
+    );
+
+    Promise.all(readPromises).then((urls) => {
+      const currentMedia = activeCarousel.mediaLibrary || [];
+      const updatedMedia = [...currentMedia, ...urls];
+
+      const updatedCarousels = carousels.map((c) =>
+        c.id === activeCarousel.id ? { ...c, mediaLibrary: updatedMedia } : c
+      );
+      saveCurrentCarouselsState(updatedCarousels);
+    });
+  };
+
+  const handleRemoveMediaFromTray = (indexToRemove: number) => {
+    const currentMedia = activeCarousel.mediaLibrary || [];
+    const updatedMedia = currentMedia.filter((_, idx) => idx !== indexToRemove);
+
+    const updatedCarousels = carousels.map((c) =>
+      c.id === activeCarousel.id ? { ...c, mediaLibrary: updatedMedia } : c
+    );
+    saveCurrentCarouselsState(updatedCarousels);
+  };
+
+  const handleAssignMediaToSlide = (slideId: string, imageIndex: number, url: string) => {
+    const updatedSlides = activeCarousel.slides.map((s) => {
+      if (s.id !== slideId) return s;
+      const images = [...(s.layers.images || [])];
+      images[imageIndex] = {
+        id: `img_${Date.now()}_${imageIndex}`,
+        position: imageIndex === 0 ? 'top' : 'bottom',
+        source: { type: 'upload', url },
+        scale: 1,
+        offsetX: 0,
+        offsetY: 0,
+      };
+
+      // Se o slide estiver em modo 'text_only', muda automaticamente para 'text_1_image'
+      const contentType = s.contentType === 'text_only' ? 'text_1_image' : s.contentType;
+
+      return {
+        ...s,
+        contentType,
+        layers: { ...s.layers, images },
+      };
+    });
+
+    const updatedCarousels = carousels.map((c) =>
+      c.id === activeCarousel.id ? { ...c, slides: updatedSlides } : c
+    );
+    saveCurrentCarouselsState(updatedCarousels);
+  };
+
+  const handleCreateSlideFromMedia = (url: string) => {
+    const currentSlide = activeSlide;
+    const contentType = currentSlide.contentType === 'text_only' ? 'text_1_image' : currentSlide.contentType;
+    const newSlide: Slide = {
+      id: `slide_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`,
+      contentType,
+      layoutStyle: currentSlide.layoutStyle,
+      imageLayout: currentSlide.imageLayout,
+      theme: currentSlide.theme,
+      background: currentSlide.background,
+      layers: {
+        text: [
+          {
+            id: `text_1`,
+            role: 'body',
+            content: 'Escreva a explicação do seu novo slide aqui...',
+          },
+        ],
+        images: [
+          {
+            id: `img_1`,
+            position: 'center',
+            source: { type: 'upload', url },
+            scale: 1,
+            offsetX: 0,
+            offsetY: 0,
+          },
+        ],
+      },
+    };
+
+    const updatedSlides = [...activeCarousel.slides, newSlide];
+    const updatedCarousels = carousels.map((c) =>
+      c.id === activeCarousel.id ? { ...c, slides: updatedSlides } : c
+    );
+    saveCurrentCarouselsState(updatedCarousels);
+    setActiveSlideIndex(updatedSlides.length - 1);
+  };
+
   return {
     carousels,
     setCarousels,
@@ -417,5 +519,9 @@ export function useCarouselState(profile: UserProfile) {
     handleDuplicateSlide,
     handleDeleteSlide,
     handleMoveSlide,
+    handleUploadMediaToTray,
+    handleRemoveMediaFromTray,
+    handleAssignMediaToSlide,
+    handleCreateSlideFromMedia,
   };
 }

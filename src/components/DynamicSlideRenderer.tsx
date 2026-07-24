@@ -10,12 +10,14 @@ interface DynamicSlideRendererProps {
   slide: Slide;
   profile: UserProfile;
   onImageTransform?: (imageIndex: number, transform: { scale?: number; offsetX?: number; offsetY?: number }) => void;
+  onAssignMedia?: (slideId: string, imageIndex: number, url: string) => void;
 }
 
 export const DynamicSlideRenderer: React.FC<DynamicSlideRendererProps> = ({
   slide,
   profile,
   onImageTransform,
+  onAssignMedia,
 }) => {
   const theme = getSlideTheme(slide.theme, slide.background);
   const schema = getTemplateSchema(slide.layoutStyle || 'twitter', slide.contentType || 'text_1_image');
@@ -166,6 +168,7 @@ export const DynamicSlideRenderer: React.FC<DynamicSlideRendererProps> = ({
             imageLayer={images[0]}
             imageIndex={0}
             onImageTransform={onImageTransform}
+            onAssignMedia={(idx, droppedUrl) => onAssignMedia?.(slide.id, idx, droppedUrl)}
             className="flex-1 min-h-[220px] w-full group"
             cardBg={theme.cardBg}
             borderColor={theme.borderColor}
@@ -192,6 +195,7 @@ export const DynamicSlideRenderer: React.FC<DynamicSlideRendererProps> = ({
                 imageLayer={images[0]}
                 imageIndex={0}
                 onImageTransform={onImageTransform}
+                onAssignMedia={(idx, droppedUrl) => onAssignMedia?.(slide.id, idx, droppedUrl)}
                 className="flex-1 h-full w-full"
                 fallbackText="Imagem 1"
                 cardBg={theme.cardBg}
@@ -210,6 +214,7 @@ export const DynamicSlideRenderer: React.FC<DynamicSlideRendererProps> = ({
                 imageLayer={images[1]}
                 imageIndex={1}
                 onImageTransform={onImageTransform}
+                onAssignMedia={(idx, droppedUrl) => onAssignMedia?.(slide.id, idx, droppedUrl)}
                 className="flex-1 h-full w-full"
                 fallbackText="Imagem 2"
                 cardBg={theme.cardBg}

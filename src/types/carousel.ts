@@ -48,6 +48,7 @@ export type Carousel = {
   updatedAt: string;
   status?: "draft" | "sent";
   aspectRatio?: "4:5" | "1:1";
+  mediaLibrary?: string[];
 };
 
 export type UserProfile = {

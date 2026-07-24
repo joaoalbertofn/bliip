@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Slide } from '@/types/carousel';
 import { CONTENT_TYPES, LAYOUT_STYLES } from '@/lib/templates';
-import { Plus, Copy, Trash2, ArrowLeft, ArrowRight, GripVertical, AlertTriangle } from 'lucide-react';
+import { Plus, Copy, Trash2, ArrowLeft, ArrowRight, GripVertical, AlertTriangle, Sparkles } from 'lucide-react';
 
 interface SlideReorderBarProps {
   slides: Slide[];
@@ -12,6 +12,8 @@ interface SlideReorderBarProps {
   onDuplicateSlide: (index: number) => void;
   onDeleteSlide: (index: number) => void;
   onMoveSlide: (fromIndex: number, toIndex: number) => void;
+  onAssignMedia?: (slideId: string, imageIndex: number, url: string) => void;
+  onCreateSlideFromMedia?: (url: string) => void;
 }
 
 export const SlideReorderBar: React.FC<SlideReorderBarProps> = ({
@@ -23,9 +25,13 @@ export const SlideReorderBar: React.FC<SlideReorderBarProps> = ({
   onDuplicateSlide,
   onDeleteSlide,
   onMoveSlide,
+  onAssignMedia,
+  onCreateSlideFromMedia,
 }) => {
   const [draggedIdx, setDraggedIdx] = useState<number | null>(null);
   const [confirmDeleteIdx, setConfirmDeleteIdx] = useState<number | null>(null);
+  const [dropHoverAdd, setDropHoverAdd] = useState(false);
+  const [dropHoverSlideId, setDropHoverSlideId] = useState<string | null>(null);
 
   const handleDragStart = (e: React.DragEvent, index: number) => {
     setDraggedIdx(index);
@@ -36,12 +42,34 @@ export const SlideReorderBar: React.FC<SlideReorderBarProps> = ({
     e.preventDefault();
   };
 
-  const handleDrop = (e: React.DragEvent, targetIndex: number) => {
+  const handleSlideDrop = (e: React.DragEvent, targetIndex: number, slideId: string) => {
     e.preventDefault();
+    setDropHoverSlideId(null);
+
+    const droppedMediaUrl = e.dataTransfer.getData('text/uri-list') || e.dataTransfer.getData('text/plain');
+
+    // Se foi uma imagem arrastada da Bandeja de Mídias
+    if (droppedMediaUrl && (droppedMediaUrl.startsWith('data:image') || droppedMediaUrl.startsWith('http'))) {
+      onAssignMedia?.(slideId, 0, droppedMediaUrl);
+      return;
+    }
+
+    // Se foi reordenação de slides
     if (draggedIdx !== null && draggedIdx !== targetIndex) {
       onMoveSlide(draggedIdx, targetIndex);
     }
     setDraggedIdx(null);
+  };
+
+  const handleAddSlideDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    setDropHoverAdd(false);
+    const droppedMediaUrl = e.dataTransfer.getData('text/uri-list') || e.dataTransfer.getData('text/plain');
+    if (droppedMediaUrl && (droppedMediaUrl.startsWith('data:image') || droppedMediaUrl.startsWith('http'))) {
+      onCreateSlideFromMedia?.(droppedMediaUrl);
+    } else {
+      onAddSlide();
+    }
   };
 
   const handleConfirmDelete = () => {
@@ -58,7 +86,7 @@ export const SlideReorderBar: React.FC<SlideReorderBarProps> = ({
         <div className="flex items-center gap-2">
           <span>SLIDES DO CARROSSEL ({slides.length})</span>
           <span className="text-[10px] font-normal text-slate-500 hidden sm:inline">
-            • Arraste ou use os botões + entre slides para inserir
+            • Arraste ou use os botões + entre slides para inserir ou solte fotos da galeria
           </span>
         </div>
 
@@ -108,6 +136,7 @@ export const SlideReorderBar: React.FC<SlideReorderBarProps> = ({
           const layoutStyleObj = LAYOUT_STYLES[slide.layoutStyle || 'twitter'];
           const templateName = contentTypeObj ? `${contentTypeObj.name.split(' ')[0]} ${layoutStyleObj?.id === 'immersive' ? '(Imersivo)' : ''}` : 'Slide';
           const textPreview = slide.layers.text?.[0]?.content?.replace(/<[^>]*>?/gm, '').slice(0, 32);
+          const isDropHover = dropHoverSlideId === slide.id;
 
           return (
             <React.Fragment key={slide.id || idx}>
@@ -128,11 +157,17 @@ export const SlideReorderBar: React.FC<SlideReorderBarProps> = ({
               <div
                 draggable
                 onDragStart={(e) => handleDragStart(e, idx)}
-                onDragOver={handleDragOver}
-                onDrop={(e) => handleDrop(e, idx)}
+                onDragOver={(e) => {
+                  handleDragOver(e);
+                  setDropHoverSlideId(slide.id);
+                }}
+                onDragLeave={() => setDropHoverSlideId(null)}
+                onDrop={(e) => handleSlideDrop(e, idx, slide.id)}
                 onClick={() => onSelectSlide(idx)}
                 className={`flex-shrink-0 w-32 h-36 rounded-xl border-2 transition-all p-2.5 flex flex-col justify-between text-left relative group cursor-pointer select-none ${
-                  isActive
+                  isDropHover
+                    ? 'border-indigo-400 bg-indigo-950/80 scale-105 shadow-glow ring-2 ring-indigo-400'
+                    : isActive
                     ? 'border-indigo-500 bg-slate-800/90 shadow-glow ring-2 ring-indigo-500/30'
                     : 'border-slate-800 bg-slate-900/80 hover:border-slate-700 hover:bg-slate-850'
                 } ${draggedIdx === idx ? 'opacity-40 scale-95 border-dashed border-indigo-400' : ''}`}
@@ -176,7 +211,6 @@ export const SlideReorderBar: React.FC<SlideReorderBarProps> = ({
                 <div className="flex items-center justify-between text-[9px] text-slate-400 font-mono pt-1 border-t border-slate-800/60">
                   <span>{slide.layers.images?.length ? `📷 ${slide.layers.images.length}` : '📝 Texto'}</span>
                   
-                  {/* Botão Duplicar no Hover */}
                   <button
                     onClick={(e) => {
                       e.stopPropagation();
@@ -207,15 +241,26 @@ export const SlideReorderBar: React.FC<SlideReorderBarProps> = ({
           </div>
         )}
 
-        {/* Botão Adicionar Novo Slide no Final */}
+        {/* Botão Adicionar Novo Slide no Final (Aceita Drop de Imagem) */}
         <button
           onClick={onAddSlide}
-          className="flex-shrink-0 w-32 h-36 rounded-xl border-2 border-dashed border-slate-700 bg-slate-850/40 hover:bg-slate-800 hover:border-indigo-500/50 text-slate-400 hover:text-indigo-400 transition flex flex-col items-center justify-center gap-2"
+          onDragOver={(e) => {
+            e.preventDefault();
+            setDropHoverAdd(true);
+          }}
+          onDragLeave={() => setDropHoverAdd(false)}
+          onDrop={handleAddSlideDrop}
+          className={`flex-shrink-0 w-32 h-36 rounded-xl border-2 border-dashed transition flex flex-col items-center justify-center gap-2 ${
+            dropHoverAdd
+              ? 'border-indigo-400 bg-indigo-950/80 text-white scale-105 shadow-glow ring-2 ring-indigo-400'
+              : 'border-slate-700 bg-slate-850/40 hover:bg-slate-800 hover:border-indigo-500/50 text-slate-400 hover:text-indigo-400'
+          }`}
+          title="Solte uma foto aqui para criar um novo slide automaticamente!"
         >
           <div className="w-9 h-9 rounded-full bg-slate-800 flex items-center justify-center border border-slate-700">
-            <Plus className="w-5 h-5 text-indigo-400" />
+            {dropHoverAdd ? <Sparkles className="w-5 h-5 text-indigo-400 animate-pulse" /> : <Plus className="w-5 h-5 text-indigo-400" />}
           </div>
-          <span className="text-xs font-semibold">Novo Slide</span>
+          <span className="text-xs font-semibold">{dropHoverAdd ? 'Criar com Foto' : 'Novo Slide'}</span>
         </button>
       </div>
 

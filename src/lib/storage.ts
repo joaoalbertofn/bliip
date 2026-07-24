@@ -71,6 +71,7 @@ export function sanitizeCarousel(c: any): Carousel {
     updatedAt: typeof c?.updatedAt === 'string' ? c.updatedAt : new Date().toISOString(),
     status: c?.status === 'sent' ? 'sent' : 'draft',
     aspectRatio: c?.aspectRatio === '1:1' ? '1:1' : '4:5',
+    mediaLibrary: Array.isArray(c?.mediaLibrary) ? c.mediaLibrary : [],
     slides: rawSlides.map(sanitizeSlide),
   };
 }

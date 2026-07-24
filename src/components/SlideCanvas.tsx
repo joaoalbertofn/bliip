@@ -7,10 +7,11 @@ interface SlideCanvasProps {
   profile: UserProfile;
   aspectRatio?: '4:5' | '1:1';
   onImageTransform?: (imageIndex: number, transform: { scale?: number; offsetX?: number; offsetY?: number }) => void;
+  onAssignMedia?: (slideId: string, imageIndex: number, url: string) => void;
 }
 
 export const SlideCanvas = forwardRef<HTMLDivElement, SlideCanvasProps>(
-  ({ slide, profile, aspectRatio = '4:5', onImageTransform }, ref) => {
+  ({ slide, profile, aspectRatio = '4:5', onImageTransform, onAssignMedia }, ref) => {
     const heightClass = aspectRatio === '1:1' ? 'aspect-square' : 'aspect-[4/5]';
 
     return (
@@ -24,6 +25,7 @@ export const SlideCanvas = forwardRef<HTMLDivElement, SlideCanvasProps>(
             slide={slide}
             profile={profile}
             onImageTransform={onImageTransform}
+            onAssignMedia={onAssignMedia}
           />
         </div>
       </div>

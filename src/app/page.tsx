@@ -15,7 +15,7 @@ import { TemplateSelector } from '@/components/TemplateSelector';
 import { HighlightTextEditor } from '@/components/HighlightTextEditor';
 import { UserProfileModal } from '@/components/UserProfileModal';
 import { IntegrationsModal } from '@/components/IntegrationsModal';
-import { ExportModal } from '@/components/ExportModal';
+import { MediaTray } from '@/components/MediaTray';
 
 import { Upload, Palette, Layers, Plus, Sliders, Image as ImageIcon, Quote, Check, RotateCcw, ZoomIn, Move, Type } from 'lucide-react';
 
@@ -64,6 +64,10 @@ export default function BliipApp() {
     handleDuplicateSlide,
     handleDeleteSlide,
     handleMoveSlide,
+    handleUploadMediaToTray,
+    handleRemoveMediaFromTray,
+    handleAssignMediaToSlide,
+    handleCreateSlideFromMedia,
   } = useCarouselState(profile);
 
   // Refs de captura para exportação
@@ -242,6 +246,16 @@ export default function BliipApp() {
       <div className="flex-1 flex overflow-hidden">
         {/* Left Side Panel: Editor Controls */}
         <aside className="w-[420px] bg-slate-900 border-r border-slate-800 flex flex-col overflow-y-auto p-5 gap-6 shrink-0 scrollbar-thin">
+          {/* BANDEJA DE MÍDIAS DO CARROSSEL (ESTILO CANVA) */}
+          <MediaTray
+            mediaLibrary={activeCarousel.mediaLibrary}
+            onUploadMedia={handleUploadMediaToTray}
+            onRemoveMedia={handleRemoveMediaFromTray}
+            onCreateSlideFromMedia={handleCreateSlideFromMedia}
+          />
+
+          <hr className="border-slate-800" />
+
           <TemplateSelector
             currentContentType={activeSlide.contentType || 'text_1_image'}
             currentLayoutStyle={activeSlide.layoutStyle || 'twitter'}
@@ -656,6 +670,7 @@ export default function BliipApp() {
                 profile={profile}
                 aspectRatio={activeCarousel.aspectRatio || '4:5'}
                 onImageTransform={handleImageTransform}
+                onAssignMedia={handleAssignMediaToSlide}
               />
             </div>
           </div>
@@ -670,6 +685,8 @@ export default function BliipApp() {
             onDuplicateSlide={handleDuplicateSlide}
             onDeleteSlide={handleDeleteSlide}
             onMoveSlide={handleMoveSlide}
+            onAssignMedia={handleAssignMediaToSlide}
+            onCreateSlideFromMedia={handleCreateSlideFromMedia}
           />
         </main>
       </div>

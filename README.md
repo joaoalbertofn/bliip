@@ -30,8 +30,10 @@ O Bliip oferece dois estilos fundamentais de layout que definem a estética do s
 
 | Estilo | Nome no Editor | Descrição & Aplicação Recomendada |
 | :--- | :--- | :--- |
-| 🐦 **Twitter** | *Estilo Twitter (Perini)* | Fundo claro ou customizável com cabeçalho contendo avatar de perfil, nome, handle (`@usuario`) e selo verificado azul. Ideal para posts conceituais, autoridade, insights rápidos, tweets curados e diálogos formatados. |
-| ✨ **Immersive** | *Estilo Imersivo (Sadhguru)* | Visual de alto impacto com tipografia grande em destaque, aspas elegantes, badge de avatar circular no topo e espaço exclusivo para assinatura do autor. Ideal para citações inspiracionais, frases marcantes e encerramento de carrosséis (CTA). |
+| 🐦 **Twitter** | *Twitter* | Fundo claro ou customizável com cabeçalho contendo avatar de perfil, nome, handle (`@usuario`) e selo verificado azul. Ideal para posts conceituais, autoridade, insights rápidos, tweets curados e diálogos formatados. |
+| ✨ **Immersive** | *Immersive* | Visual de alto impacto com tipografia grande em destaque, aspas elegantes, badge de avatar circular no topo e espaço exclusivo para assinatura do autor. Ideal para citações inspiracionais, frases marcantes e encerramento de carrosséis (CTA). |
+| ⚖️ **Comparativo** | *Comparativo* | Layout estruturado com rótulos de fotos e ordenação vertical/horizontal. Ideal para comparações (Antes/Depois ou opção A vs B). |
+| 📰 **Notícia** | *Notícia* | Visual editorial estilo manchete de notícias de mercado com alta legibilidade e destaques em texto. |
 
 ---
 
