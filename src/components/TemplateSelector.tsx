@@ -27,8 +27,18 @@ export const TemplateSelector: React.FC<TemplateSelectorProps> = ({
     }
   };
 
+  const getStyleShortName = (id: LayoutStyle) => {
+    switch (id) {
+      case 'twitter': return 'Twitter';
+      case 'immersive': return 'Imersivo';
+      case 'comparison': return 'Comparativo';
+      case 'news_article': return 'Notícias';
+      default: return 'Estilo';
+    }
+  };
+
   return (
-    <div className="flex flex-col gap-5 w-full">
+    <div className="flex flex-col gap-4 w-full">
       {/* BLOCO 1: Seletor de Estilo Visual */}
       <div className="flex flex-col gap-2">
         <label className="text-xs font-semibold text-slate-300 flex items-center gap-1.5">
@@ -44,28 +54,28 @@ export const TemplateSelector: React.FC<TemplateSelectorProps> = ({
                 key={style.id}
                 type="button"
                 onClick={() => onSelectLayoutStyle(style.id)}
-                className={`p-3 rounded-xl border text-left flex flex-col justify-between gap-1.5 transition ${
+                className={`p-2.5 rounded-xl border text-left flex flex-col justify-between gap-1 transition ${
                   isSelected
                     ? 'border-indigo-500 bg-indigo-950/40 shadow-glow ring-1 ring-indigo-500/50'
                     : 'border-slate-800 bg-slate-900/60 hover:bg-slate-800 hover:border-slate-700'
                 }`}
               >
                 <div className="flex items-center justify-between w-full">
-                  <span className="text-xs font-bold text-slate-100 flex items-center gap-1.5">
+                  <span className="text-xs font-bold text-slate-100 flex items-center gap-1.5 truncate">
                     {style.id === 'twitter' ? (
-                      <Twitter className="w-3.5 h-3.5 text-sky-400" />
+                      <Twitter className="w-3.5 h-3.5 text-sky-400 shrink-0" />
                     ) : style.id === 'comparison' ? (
-                      <Layers className="w-3.5 h-3.5 text-emerald-400" />
+                      <Layers className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
                     ) : style.id === 'news_article' ? (
-                      <FileText className="w-3.5 h-3.5 text-amber-400" />
+                      <FileText className="w-3.5 h-3.5 text-amber-400 shrink-0" />
                     ) : (
-                      <Sparkles className="w-3.5 h-3.5 text-rose-400" />
+                      <Sparkles className="w-3.5 h-3.5 text-rose-400 shrink-0" />
                     )}
-                    <span>{style.name}</span>
+                    <span className="truncate">{getStyleShortName(style.id)}</span>
                   </span>
-                  {isSelected && <span className="w-2 h-2 rounded-full bg-indigo-400 animate-pulse" />}
+                  {isSelected && <span className="w-2 h-2 rounded-full bg-indigo-400 animate-pulse shrink-0 ml-1" />}
                 </div>
-                <p className="text-[10px] text-slate-400 line-clamp-2 leading-tight">
+                <p className="text-[10px] text-slate-400 line-clamp-1 leading-tight">
                   {style.description}
                 </p>
               </button>
@@ -92,7 +102,7 @@ export const TemplateSelector: React.FC<TemplateSelectorProps> = ({
                 type="button"
                 disabled={isDisabled}
                 onClick={() => !isDisabled && onSelectContentType(type.id)}
-                className={`p-2.5 rounded-xl border text-center flex flex-col items-center justify-center gap-1 transition ${
+                className={`py-2 px-1.5 rounded-xl border text-center flex flex-col items-center justify-center gap-1 transition ${
                   isDisabled
                     ? 'opacity-30 border-slate-800 bg-slate-950 text-slate-600 cursor-not-allowed'
                     : isSelected
@@ -102,7 +112,7 @@ export const TemplateSelector: React.FC<TemplateSelectorProps> = ({
                 title={isDisabled ? 'O estilo comparativo requer 2 imagens' : type.name}
               >
                 {getContentIcon(type.id)}
-                <span className="text-[11px] leading-tight">{type.name}</span>
+                <span className="text-[10px] font-medium leading-tight">{type.name}</span>
               </button>
             );
           })}

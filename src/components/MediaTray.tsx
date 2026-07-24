@@ -48,22 +48,7 @@ export const MediaTray: React.FC<MediaTrayProps> = ({
   };
 
   return (
-    <div className="flex flex-col gap-3 w-full bg-slate-800/40 p-3.5 rounded-2xl border border-slate-700/60 shadow-lg">
-      <div className="flex items-center justify-between">
-        <label className="text-xs font-bold text-slate-200 uppercase tracking-wider flex items-center gap-1.5">
-          <ImageIcon className="w-4 h-4 text-indigo-400" />
-          <span>Fotos da História ({mediaLibrary.length})</span>
-        </label>
-        <button
-          type="button"
-          onClick={() => fileInputRef.current?.click()}
-          className="px-2.5 py-1 text-[11px] font-semibold text-indigo-300 bg-indigo-950/60 hover:bg-indigo-900/80 border border-indigo-700/60 rounded-lg flex items-center gap-1 transition"
-        >
-          <Plus className="w-3 h-3" />
-          <span>Adicionar Fotos</span>
-        </button>
-      </div>
-
+    <div className="flex flex-col gap-3 w-full">
       <input
         ref={fileInputRef}
         type="file"

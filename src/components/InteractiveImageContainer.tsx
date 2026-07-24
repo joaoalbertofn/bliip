@@ -1,6 +1,6 @@
 import React, { useState, useRef } from 'react';
 import { ImageLayer } from '@/types/carousel';
-import { Sparkles } from 'lucide-react';
+import { Sparkles, UploadCloud } from 'lucide-react';
 
 interface InteractiveImageContainerProps {
   imageLayer?: ImageLayer;
@@ -22,12 +22,14 @@ export const InteractiveImageContainer: React.FC<InteractiveImageContainerProps>
   onAssignMedia,
   onSelect,
   className = '',
-  fallbackText = 'Faça upload de uma imagem ou arraste da galeria',
+  fallbackText = 'Solte uma foto aqui ou clique para selecionar',
   cardBg = '#f8fafc',
   borderColor = '#e2e8f0',
   textSecondary = '#64748b',
 }) => {
   const containerRef = useRef<HTMLDivElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
   const [isDragging, setIsDragging] = useState(false);
   const [isDropTarget, setIsDropTarget] = useState(false);
   const dragStartRef = useRef<{ x: number; y: number; startOffsetX: number; startOffsetY: number } | null>(null);
@@ -45,7 +47,14 @@ export const InteractiveImageContainer: React.FC<InteractiveImageContainerProps>
 
   const handleMouseDown = (e: React.MouseEvent<HTMLDivElement>) => {
     onSelect?.(imageIndex);
-    if (!url || !onImageTransform) return;
+
+    // Se o slot estiver vazio, abre o seletor nativo de arquivos do computador
+    if (!url) {
+      fileInputRef.current?.click();
+      return;
+    }
+
+    if (!onImageTransform) return;
     e.preventDefault();
     setIsDragging(true);
     dragStartRef.current = {
@@ -78,7 +87,7 @@ export const InteractiveImageContainer: React.FC<InteractiveImageContainerProps>
     }
   };
 
-  // HANDLERS PARA DRAG & DROP DA BANDEJA DE MÍDIAS
+  // HANDLERS PARA DRAG & DROP DA BANDEJA DE MÍDIAS E DO COMPUTADOR
   const handleDragOver = (e: React.DragEvent<HTMLDivElement>) => {
     e.preventDefault();
     e.stopPropagation();
@@ -96,9 +105,39 @@ export const InteractiveImageContainer: React.FC<InteractiveImageContainerProps>
     e.stopPropagation();
     setIsDropTarget(false);
 
+    // 1. Arquivos arrastados direto do computador
+    if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+      const file = e.dataTransfer.files[0];
+      const reader = new FileReader();
+      reader.onload = (evt) => {
+        const fileUrl = evt.target?.result as string;
+        if (fileUrl && onAssignMedia) {
+          onAssignMedia(imageIndex, fileUrl);
+        }
+      };
+      reader.readAsDataURL(file);
+      return;
+    }
+
+    // 2. Foto arrastada da Bandeja de Mídias
     const droppedUrl = e.dataTransfer.getData('text/plain') || e.dataTransfer.getData('text/uri-list');
     if (droppedUrl && onAssignMedia) {
       onAssignMedia(imageIndex, droppedUrl);
+    }
+  };
+
+  const handleFileInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files[0] && onAssignMedia) {
+      const file = e.target.files[0];
+      const reader = new FileReader();
+      reader.onload = (evt) => {
+        const fileUrl = evt.target?.result as string;
+        if (fileUrl) {
+          onAssignMedia(imageIndex, fileUrl);
+        }
+      };
+      reader.readAsDataURL(file);
+      e.target.value = '';
     }
   };
 
@@ -119,11 +158,19 @@ export const InteractiveImageContainer: React.FC<InteractiveImageContainerProps>
           ? isDragging
             ? 'cursor-grabbing'
             : 'cursor-grab'
-          : 'cursor-default'
+          : 'cursor-pointer hover:border-indigo-400/80 hover:bg-slate-800/40'
       } ${className}`}
       style={{ backgroundColor: cardBg, borderColor: isDropTarget ? '#6366f1' : borderColor }}
-      title={isInteractive ? `Imagem #${imageIndex + 1} - Clique para mover ou solte outra foto aqui` : undefined}
+      title={isInteractive ? `Imagem #${imageIndex + 1} - Clique e arraste para mover` : 'Clique para selecionar do computador ou solte uma foto aqui'}
     >
+      <input
+        ref={fileInputRef}
+        type="file"
+        accept="image/*"
+        onChange={handleFileInputChange}
+        className="hidden"
+      />
+
       {url ? (
         <img
           src={url}
@@ -137,14 +184,15 @@ export const InteractiveImageContainer: React.FC<InteractiveImageContainerProps>
           }}
         />
       ) : (
-        <div className="flex flex-col items-center justify-center p-6 text-center" style={{ color: textSecondary }}>
-          <span className="text-sm font-medium">{fallbackText}</span>
+        <div className="flex flex-col items-center justify-center p-4 text-center gap-1.5" style={{ color: textSecondary }}>
+          <UploadCloud className="w-6 h-6 text-indigo-400 opacity-80 mb-0.5" />
+          <span className="text-xs font-semibold leading-tight">{fallbackText}</span>
         </div>
       )}
 
       {/* OVERLAY VISUAL DE DROP DESTACADO */}
       {isDropTarget && (
-        <div className="absolute inset-0 bg-indigo-950/80 backdrop-blur-sm flex flex-col items-center justify-center text-white z-40 p-4 text-center animate-fadeIn">
+        <div className="absolute inset-0 bg-indigo-950/85 backdrop-blur-sm flex flex-col items-center justify-center text-white z-40 p-4 text-center animate-fadeIn">
           <Sparkles className="w-8 h-8 text-indigo-400 animate-pulse mb-2" />
           <span className="text-xs font-bold uppercase tracking-wider">Solte para aplicar à Foto #{imageIndex + 1}</span>
         </div>
