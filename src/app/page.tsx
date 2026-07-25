@@ -1,7 +1,9 @@
 'use client';
 
 import React, { useState, useEffect, useRef } from 'react';
-import { UserProfile, ContentType, LayoutStyle } from '@/types/carousel';
+import dynamic from 'next/dynamic';
+import { useSession } from 'next-auth/react';
+import { UserProfile, ContentType, LayoutStyle, SocialChannel } from '@/types/carousel';
 import { loadUserProfile, saveUserProfile, DEFAULT_USER_PROFILE } from '@/lib/storage';
 import { useCarouselState } from '@/hooks/useCarouselState';
 
@@ -13,19 +15,57 @@ import { SlideCanvas } from '@/components/SlideCanvas';
 import { SlideReorderBar } from '@/components/SlideReorderBar';
 import { TemplateSelector } from '@/components/TemplateSelector';
 import { HighlightTextEditor } from '@/components/HighlightTextEditor';
-import { UserProfileModal } from '@/components/UserProfileModal';
-import { IntegrationsModal } from '@/components/IntegrationsModal';
-import { ExportModal } from '@/components/ExportModal';
 import { MediaTray } from '@/components/MediaTray';
 import { CollapsibleSection } from '@/components/CollapsibleSection';
+import { PostCaptionEditor } from '@/components/PostCaptionEditor';
+import { SocialPostPreviewPanel } from '@/components/SocialPostPreviewPanel';
+import { triggerLeadSync } from '@/lib/leadSync';
 
-import { Upload, Palette, Layers, Plus, Sliders, Image as ImageIcon, Quote, Check, RotateCcw, ZoomIn, Move, Type, Trash2 } from 'lucide-react';
+const UserProfileModal = dynamic(
+  () => import('@/components/UserProfileModal').then((mod) => mod.UserProfileModal),
+  { ssr: false }
+);
+const IntegrationsModal = dynamic(
+  () => import('@/components/IntegrationsModal').then((mod) => mod.IntegrationsModal),
+  { ssr: false }
+);
+const ExportModal = dynamic(
+  () => import('@/components/ExportModal').then((mod) => mod.ExportModal),
+  { ssr: false }
+);
+
+import {
+  Upload,
+  Palette,
+  Layers,
+  Plus,
+  Sliders,
+  Image as ImageIcon,
+  Quote,
+  Check,
+  RotateCcw,
+  ZoomIn,
+  Move,
+  Type,
+  Trash2,
+  ChevronLeft,
+  ChevronRight,
+  Send,
+  Eye,
+  SlidersHorizontal
+} from 'lucide-react';
 
 export default function BliipApp() {
+  const { data: session } = useSession();
   const [viewMode, setViewMode] = useState<'dashboard' | 'editor'>('dashboard');
   const [profile, setProfile] = useState<UserProfile>(DEFAULT_USER_PROFILE);
   const [selectedImageIndex, setSelectedImageIndex] = useState<number>(0);
-  const [canvasZoom, setCanvasZoom] = useState<number>(100);
+  const [canvasZoom, setCanvasZoom] = useState<'fit' | number>('fit');
+  const [autoFitScale, setAutoFitScale] = useState<number>(1);
+
+  // Estados de Recolhimento dos Painéis Laterais (3 Colunas)
+  const [isLeftPanelOpen, setIsLeftPanelOpen] = useState(true);
+  const [isRightPanelOpen, setIsRightPanelOpen] = useState(true);
 
   // Modais de UI
   const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
@@ -33,6 +73,83 @@ export default function BliipApp() {
   const [isExportModalOpen, setIsExportModalOpen] = useState(false);
   const [isNewCarouselModalOpen, setIsNewCarouselModalOpen] = useState(false);
   const [newCarouselSlideCount, setNewCarouselSlideCount] = useState(4);
+
+  const [integrations, setIntegrations] = useState<{ bufferApiKey?: string }>({ bufferApiKey: '' });
+  const [connectedChannels, setConnectedChannels] = useState<SocialChannel[]>(['instagram', 'linkedin']);
+  const [isBufferConnected, setIsBufferConnected] = useState<boolean>(false);
+
+  // Carrega as integrações salvas e busca os canais realmente conectados no Buffer
+  useEffect(() => {
+    async function fetchBufferChannels() {
+      const config = await loadUserProfile();
+      const loadedIntegrations = await (await import('@/lib/storage')).loadIntegrations();
+      setIntegrations(loadedIntegrations);
+
+      if (loadedIntegrations.bufferApiKey && loadedIntegrations.bufferApiKey.trim() !== '') {
+        setIsBufferConnected(true);
+        try {
+          const res = await fetch('/api/buffer', {
+            headers: { Authorization: `Bearer ${loadedIntegrations.bufferApiKey.trim()}` },
+          });
+          if (res.ok) {
+            const data = await res.json();
+            const profiles = data.profiles || [];
+            const channels: SocialChannel[] = [];
+            profiles.forEach((p: any) => {
+              const svc = p.service?.toLowerCase() || '';
+              if (svc.includes('instagram') && !channels.includes('instagram')) channels.push('instagram');
+              if (svc.includes('linkedin') && !channels.includes('linkedin')) channels.push('linkedin');
+              if (svc.includes('youtube') && !channels.includes('youtube')) channels.push('youtube');
+              if (svc.includes('tiktok') && !channels.includes('tiktok')) channels.push('tiktok');
+            });
+            if (channels.length > 0) {
+              setConnectedChannels(channels);
+            } else {
+              setConnectedChannels(['instagram', 'linkedin']);
+            }
+          }
+        } catch (e) {
+          console.warn('Erro ao buscar canais do Buffer:', e);
+        }
+      } else {
+        setIsBufferConnected(false);
+        setConnectedChannels([]);
+      }
+    }
+
+    fetchBufferChannels();
+  }, [isIntegrationsModalOpen]);
+
+  const canvasContainerRef = useRef<HTMLDivElement>(null);
+
+  // Carrega o perfil salvo no IndexedDB / localStorage na inicialização
+  useEffect(() => {
+    async function initProfile() {
+      const loaded = await loadUserProfile();
+      if (loaded) {
+        setProfile(loaded);
+      }
+    }
+    initProfile();
+  }, []);
+
+  // Sincroniza dados da sessão do Google preservando o avatar personalizado & Sincroniza Lead
+  useEffect(() => {
+    if (session?.user) {
+      setProfile((prev) => {
+        const updated: UserProfile = {
+          name: session.user?.name || prev.name,
+          avatarUrl: prev.avatarUrl && !prev.avatarUrl.includes('unsplash.com') ? prev.avatarUrl : (session.user?.image || prev.avatarUrl),
+          handle: session.user?.email ? `@${session.user.email.split('@')[0]}` : prev.handle,
+        };
+        saveUserProfile(updated);
+        return updated;
+      });
+
+      // Dispara a sincronização automática com o Google Sheets
+      triggerLeadSync(session.user);
+    }
+  }, [session]);
 
   // Custom Hook de Estado dos Carrosséis
   const {
@@ -60,7 +177,6 @@ export default function BliipApp() {
     handleImageTransform,
     handleThemeChange,
     handleBackgroundChange,
-    handleFontSizeChange,
     handleAddSlide,
     handleInsertSlideAt,
     handleDuplicateSlide,
@@ -70,35 +186,45 @@ export default function BliipApp() {
     handleRemoveMediaFromTray,
     handleAssignMediaToSlide,
     handleCreateSlideFromMedia,
+    handleCaptionChange,
+    handleToggleChannel,
   } = useCarouselState(profile);
 
   // Refs de captura para exportação
   const activeSlideRef = useRef<HTMLDivElement>(null);
   const hiddenSlideRefs = useRef<(HTMLDivElement | null)[]>([]);
 
+  // Cálculo Dinâmico do Zoom "Fit" baseado na altura do contêiner do Canvas
   useEffect(() => {
-    async function initProfile() {
-      const savedProfile = await loadUserProfile();
-      setProfile(savedProfile);
-    }
-    initProfile();
-  }, []);
+    if (!canvasContainerRef.current) return;
+
+    const updateScale = () => {
+      if (!canvasContainerRef.current) return;
+      const containerHeight = canvasContainerRef.current.clientHeight;
+      const targetHeight = activeCarousel?.aspectRatio === '1:1' ? 460 : 575;
+      const availableHeight = Math.max(containerHeight - 32, 200);
+      const scale = Math.min(availableHeight / targetHeight, 1.2);
+      setAutoFitScale(Math.max(scale, 0.35));
+    };
+
+    updateScale();
+    const resizeObserver = new ResizeObserver(updateScale);
+    resizeObserver.observe(canvasContainerRef.current);
+    return () => resizeObserver.disconnect();
+  }, [activeCarousel?.aspectRatio, viewMode, isLeftPanelOpen, isRightPanelOpen]);
+
+  const effectiveZoomScale =
+    canvasZoom === 'fit' ? autoFitScale : (canvasZoom as number) / 100;
 
   const handleSaveProfile = (newProfile: UserProfile) => {
     setProfile(newProfile);
     saveUserProfile(newProfile);
   };
 
-  const handleCreateNewCarouselSubmit = () => {
-    const newCarousel = handleCreateNewCarousel(newCarouselSlideCount);
-    setIsNewCarouselModalOpen(false);
-    setViewMode('editor');
-  };
-
   if (!activeCarousel || !activeSlide) {
     return (
-      <div className="w-full h-screen flex items-center justify-center bg-slate-950 text-slate-400">
-        Carregando o Bliip...
+      <div className="w-full h-screen flex items-center justify-center bg-slate-950 text-slate-400 font-mono">
+        Carregando o Bliip Studio...
       </div>
     );
   }
@@ -128,13 +254,15 @@ export default function BliipApp() {
         />
 
         {/* Hidden Canvas Elements para exportação rápida no Dashboard */}
-        <div className="fixed top-0 left-[-9999px] pointer-events-none -z-50 flex flex-col gap-4">
+        <div className="fixed top-[-9999px] left-[-9999px] opacity-0 pointer-events-none">
           {activeCarousel.slides.map((s, idx) => (
-            <div key={s.id} className="w-[540px]">
+            <div
+              key={s.id}
+              ref={(el) => {
+                hiddenSlideRefs.current[idx] = el;
+              }}
+            >
               <SlideCanvas
-                ref={(el) => {
-                  hiddenSlideRefs.current[idx] = el;
-                }}
                 slide={s}
                 profile={profile}
                 aspectRatio={activeCarousel.aspectRatio || '4:5'}
@@ -201,7 +329,11 @@ export default function BliipApp() {
                 </button>
 
                 <button
-                  onClick={handleCreateNewCarouselSubmit}
+                  onClick={() => {
+                    handleCreateNewCarousel(newCarouselSlideCount);
+                    setIsNewCarouselModalOpen(false);
+                    setViewMode('editor');
+                  }}
                   className="px-5 py-2.5 text-xs font-bold bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl shadow-glow transition flex items-center gap-1.5"
                 >
                   <Plus className="w-4 h-4" />
@@ -215,7 +347,7 @@ export default function BliipApp() {
     );
   }
 
-  // RENDERIZAÇÃO 2: Tela de Editor em Tela Cheia
+  // RENDERIZAÇÃO 2: Tela de Editor com Arquitetura em 3 Colunas
   const maxImagesAllowed =
     activeSlide.contentType === 'text_2_images'
       ? 2
@@ -225,7 +357,7 @@ export default function BliipApp() {
 
   return (
     <div className="w-screen h-screen flex flex-col overflow-hidden bg-slate-950">
-      {/* Top Header Navbar com botão Voltar ao Dashboard */}
+      {/* Top Header Navbar */}
       <Navbar
         carouselName={activeCarousel.name}
         onUpdateCarouselName={handleUpdateCarouselName}
@@ -244,384 +376,318 @@ export default function BliipApp() {
         isSaving={isSaving}
       />
 
-      {/* Main Workspace Area */}
-      <div className="flex-1 flex overflow-hidden">
-        {/* Left Side Panel: Editor Controls (Organizado em Acordeões Sanfonados) */}
-        <aside className="w-[420px] bg-slate-950 border-r border-slate-800 flex flex-col overflow-y-auto p-4 pb-16 gap-4 shrink-0 scrollbar-thin">
-          {/* GRUPO 1: Fotos da História (Bandeja de Mídias) */}
-          <CollapsibleSection
-            icon={<ImageIcon className="w-4 h-4" />}
-            title="Fotos da História"
-            badgeText={`${activeCarousel.mediaLibrary?.length || 0}`}
-            defaultOpen={true}
-          >
-            <MediaTray
-              mediaLibrary={activeCarousel.mediaLibrary}
-              onUploadMedia={handleUploadMediaToTray}
-              onRemoveMedia={handleRemoveMediaFromTray}
-              onCreateSlideFromMedia={handleCreateSlideFromMedia}
-            />
-          </CollapsibleSection>
+      {/* Main Workspace Area (3 Colunas de Tela) */}
+      <div className="flex-1 flex overflow-hidden relative">
+        {/* COLUNA 1: ⬅️ Slide Design (Painel Esquerdo - Recolhível) */}
+        {!isLeftPanelOpen ? (
+          <div className="w-12 bg-slate-900 border-r border-slate-800 flex flex-col items-center py-4 gap-4 shrink-0 z-20">
+            <button
+              onClick={() => setIsLeftPanelOpen(true)}
+              className="p-2 bg-slate-800 hover:bg-indigo-600 text-slate-300 hover:text-white rounded-xl border border-slate-700 transition shadow-sm"
+              title="Expandir Slide Design Inspector"
+            >
+              <ChevronRight className="w-4 h-4" />
+            </button>
 
-          {/* GRUPO 2: Estilo Visual & Tipo de Conteúdo */}
-          <CollapsibleSection
-            icon={<Sliders className="w-4 h-4" />}
-            title="Estilo Visual & Layout"
-            defaultOpen={true}
-          >
-            <TemplateSelector
-              currentContentType={activeSlide.contentType || 'text_1_image'}
-              currentLayoutStyle={activeSlide.layoutStyle || 'twitter'}
-              onSelectContentType={handleSelectContentType}
-              onSelectLayoutStyle={handleSelectLayoutStyle}
-            />
-
-            {maxImagesAllowed === 2 && (
-              <div className="flex items-center justify-between bg-slate-800/80 p-2.5 rounded-xl border border-slate-700/60 mt-2">
-                <span className="text-xs font-medium text-slate-300">Orientação das Fotos:</span>
-                <div className="flex items-center gap-1 bg-slate-900 p-1 rounded-lg">
-                  <button
-                    onClick={() => {
-                      handleSelectContentType('text_2_images');
-                      updateActiveSlide((prev) => ({ ...prev, imageLayout: 'vertical' }));
-                    }}
-                    className={`px-2.5 py-1 text-[11px] font-semibold rounded-md transition ${
-                      activeSlide.imageLayout === 'vertical'
-                        ? 'bg-indigo-600 text-white shadow'
-                        : 'text-slate-400 hover:text-white'
-                    }`}
-                  >
-                    Vertical (2 Linhas)
-                  </button>
-                  <button
-                    onClick={() => {
-                      handleSelectContentType('text_2_images');
-                      updateActiveSlide((prev) => ({ ...prev, imageLayout: 'horizontal' }));
-                    }}
-                    className={`px-2.5 py-1 text-[11px] font-semibold rounded-md transition ${
-                      activeSlide.imageLayout !== 'vertical'
-                        ? 'bg-indigo-600 text-white shadow'
-                        : 'text-slate-400 hover:text-white'
-                    }`}
-                  >
-                    Horizontal (2 Colunas)
-                  </button>
-                </div>
+            <div className="writing-mode-vertical text-xs font-bold text-slate-400 tracking-wider uppercase flex items-center gap-2 mt-4">
+              <SlidersHorizontal className="w-3.5 h-3.5 text-indigo-400" />
+              <span>Slide Design</span>
+            </div>
+          </div>
+        ) : (
+          <aside className="w-[360px] xl:w-[400px] bg-slate-900 border-r border-slate-800 flex flex-col overflow-hidden shrink-0 z-20 transition-all duration-300">
+            {/* Header do Painel Esquerdo com Botão Recolher */}
+            <div className="p-4 border-b border-slate-800 flex items-center justify-between bg-slate-900/90 backdrop-blur shrink-0">
+              <div className="flex items-center gap-2">
+                <h3 className="text-xs font-extrabold text-white uppercase tracking-wider">
+                  ⬅️ Slide Design Inspector
+                </h3>
               </div>
-            )}
-          </CollapsibleSection>
 
-          {/* GRUPO 3: Conteúdo do Slide (Título, Texto, Assinatura e Tamanho) */}
-          <CollapsibleSection
-            icon={<Layers className="w-4 h-4" />}
-            title={`Conteúdo do Slide #${activeSlideIndex + 1}`}
-            defaultOpen={true}
-          >
-            {activeSlide.layoutStyle === 'immersive' ? (
-              <div className="flex flex-col gap-4">
-                <div>
-                  <label className="block text-xs font-semibold text-slate-300 mb-1.5 flex items-center gap-1.5">
-                    <Quote className="w-3.5 h-3.5 text-indigo-400" />
-                    <span>Frase / Citação Principal</span>
-                  </label>
-                  <HighlightTextEditor
-                    value={activeSlide.layers.text?.find((t) => t.role === 'quote' || t.role === 'body')?.content || ''}
-                    onChange={handleQuoteTextChange}
-                    placeholder="Digite a citação inspiracional..."
-                    rows={4}
-                  />
-                </div>
+              <button
+                onClick={() => setIsLeftPanelOpen(false)}
+                className="p-1.5 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-lg border border-slate-700 transition"
+                title="Recolher Painel"
+              >
+                <ChevronLeft className="w-4 h-4" />
+              </button>
+            </div>
 
-                <div>
-                  <label className="block text-xs font-semibold text-slate-300 mb-1.5">
-                    Assinatura / Autor
-                  </label>
-                  <input
-                    type="text"
-                    value={activeSlide.layers.text?.find((t) => t.role === 'signature')?.content || ''}
-                    onChange={(e) => handleSignatureChange(e.target.value)}
-                    placeholder="Nome do autor..."
-                    className="w-full bg-slate-800 border border-slate-700 rounded-xl p-3 text-sm text-white focus:outline-none focus:border-indigo-500"
-                  />
-                </div>
-              </div>
-            ) : (
-              <div className="flex flex-col gap-3">
-                {(activeSlide.layoutStyle === 'news_article' || activeSlide.layoutStyle === 'comparison') && (
-                  <div>
-                    <label className="block text-xs font-semibold text-slate-300 mb-1.5">
-                      Título / Manchete (Caixa Alta / Destaque)
+            {/* Conteúdo de Edição do Slide em Acordeões */}
+            <div className="flex-1 overflow-y-auto p-4 flex flex-col gap-4 scrollbar-thin scrollbar-thumb-slate-800">
+              {/* SEÇÃO 1: Bandeja de Mídias (Fotos da História) */}
+              <CollapsibleSection
+                icon={<ImageIcon className="w-4 h-4" />}
+                title="Fotos da História"
+                badgeText={`${(activeCarousel.mediaLibrary || []).length} mídias`}
+                defaultOpen={true}
+              >
+                <MediaTray
+                  mediaLibrary={activeCarousel.mediaLibrary || []}
+                  onUploadMedia={handleUploadMediaToTray}
+                  onRemoveMedia={handleRemoveMediaFromTray}
+                  onCreateSlideFromMedia={handleCreateSlideFromMedia}
+                />
+              </CollapsibleSection>
+
+              {/* SEÇÃO 2: Estilo Visual & Tipo de Conteúdo */}
+              <CollapsibleSection
+                icon={<Sliders className="w-4 h-4" />}
+                title="Estilo Visual & Layout"
+                defaultOpen={true}
+              >
+                <TemplateSelector
+                  currentContentType={activeSlide.contentType || 'text_1_image'}
+                  currentLayoutStyle={activeSlide.layoutStyle || 'twitter'}
+                  onSelectContentType={handleSelectContentType}
+                  onSelectLayoutStyle={handleSelectLayoutStyle}
+                />
+              </CollapsibleSection>
+
+              {/* SEÇÃO 3: Edição de Texto do Slide */}
+              <CollapsibleSection
+                icon={<Layers className="w-4 h-4" />}
+                title="Texto do Slide"
+                defaultOpen={true}
+              >
+                {activeSlide.layoutStyle === 'immersive' ? (
+                  <div className="flex flex-col gap-3">
+                    <label className="text-xs font-semibold text-slate-300 flex items-center gap-1.5">
+                      <Quote className="w-3.5 h-3.5 text-amber-400" />
+                      <span>Citação Inspiracional</span>
                     </label>
-                    <input
-                      type="text"
-                      value={activeSlide.title || ''}
-                      onChange={(e) => updateActiveSlide((prev) => ({ ...prev, title: e.target.value }))}
-                      placeholder={
-                        activeSlide.layoutStyle === 'news_article'
-                          ? 'MAS O PROCESSO NÃO SE RESUME A CORTAR.'
-                          : 'Digite o título da comparação...'
+                    <HighlightTextEditor
+                      value={
+                        activeSlide.layers.text?.find((t) => t.role === 'quote' || t.role === 'body')?.content || ''
                       }
-                      className="w-full bg-slate-800 border border-slate-700 rounded-xl p-3 text-sm font-semibold text-white focus:outline-none focus:border-indigo-500"
+                      onChange={handleQuoteTextChange}
+                      rows={4}
+                      placeholder="Digite a citação imersiva..."
+                    />
+
+                    <div className="flex flex-col gap-1.5 mt-1 pt-3 border-t border-slate-800/80">
+                      <label className="text-xs font-semibold text-slate-300">
+                        Assinatura (Manuscrito)
+                      </label>
+                      <input
+                        type="text"
+                        value={activeSlide.layers.text?.find((t) => t.role === 'signature')?.content || ''}
+                        onChange={(e) => handleSignatureChange(e.target.value)}
+                        placeholder={`Padrão: ${profile.name}`}
+                        className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3.5 py-2 text-white text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 font-handwriting text-xl"
+                      />
+                    </div>
+                  </div>
+                ) : (
+                  <div className="flex flex-col gap-2">
+                    <div className="flex items-center justify-between">
+                      <label className="text-xs font-semibold text-slate-300 flex items-center gap-1.5">
+                        <Type className="w-3.5 h-3.5 text-amber-400" />
+                        <span>Conteúdo do Tweet / Post</span>
+                      </label>
+
+                      {activeSlide.contentType === 'text_only' && (
+                        <div className="flex items-center gap-1">
+                          {['Você:', 'Bliip:'].map((prefix) => (
+                            <button
+                              key={prefix}
+                              type="button"
+                              onClick={() => {
+                                const current = activeSlide.layers.text?.[0]?.content || '';
+                                const newText = current ? `${current}\n\n${prefix} ` : `${prefix} `;
+                                handleTextChange(0, newText);
+                              }}
+                              className="px-2 py-0.5 text-[10px] font-bold bg-indigo-950 border border-indigo-700 text-indigo-300 rounded hover:bg-indigo-900 transition"
+                            >
+                              +{prefix}
+                            </button>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+
+                    <HighlightTextEditor
+                      value={activeSlide.layers.text?.[0]?.content || ''}
+                      onChange={(newText) => handleTextChange(0, newText)}
+                      rows={5}
+                      placeholder="Digite o texto do slide..."
                     />
                   </div>
                 )}
+              </CollapsibleSection>
 
-                <div>
-                  <label className="block text-xs font-semibold text-slate-300 mb-1.5">
-                    Texto Principal (Suporta Diálogo e Destaques)
-                  </label>
-                  <HighlightTextEditor
-                    value={activeSlide.layers.text?.[0]?.content || ''}
-                    onChange={(text) => handleTextChange(0, text)}
-                    placeholder="Escreva seu post aqui... Use formato 'Pessoa: Fala' para diálogos."
-                    rows={activeSlide.layoutStyle === 'news_article' ? 4 : 5}
-                  />
+              {/* SEÇÃO 4: Presets de Temas de Cores */}
+              <CollapsibleSection
+                icon={<Palette className="w-4 h-4" />}
+                title="Tema de Cores do Slide"
+                defaultOpen={true}
+              >
+                <div className="grid grid-cols-5 gap-2">
+                  {(Object.keys(SLIDE_THEMES) as SlideTheme[]).map((themeId) => {
+                    const themeItem = SLIDE_THEMES[themeId];
+                    const activeThemeConfig = getSlideTheme(activeSlide.theme, activeSlide.background);
+                    const isActive = activeThemeConfig.id === themeId;
+
+                    return (
+                      <button
+                        key={themeId}
+                        type="button"
+                        onClick={() => handleThemeChange(themeId)}
+                        className={`h-10 rounded-lg border-2 transition-all flex flex-col items-center justify-center relative shadow group ${
+                          isActive ? 'border-indigo-500 scale-105 ring-2 ring-indigo-500/50' : 'border-slate-700 hover:border-slate-500'
+                        }`}
+                        style={{ backgroundColor: themeItem.bg }}
+                        title={themeItem.name}
+                      >
+                        <span className="text-xs font-bold" style={{ color: themeItem.text }}>
+                          Aa
+                        </span>
+                        {isActive && (
+                          <div className="absolute -top-1.5 -right-1.5 w-4 h-4 bg-indigo-600 text-white rounded-full flex items-center justify-center text-[10px] shadow">
+                            ✓
+                          </div>
+                        )}
+                      </button>
+                    );
+                  })}
                 </div>
-              </div>
-            )}
+              </CollapsibleSection>
+            </div>
+          </aside>
+        )}
 
-            {/* Controle de Tamanho da Fonte do Texto */}
-            <div className="flex flex-col gap-2 pt-3 border-t border-slate-800/80">
-              <div className="flex items-center justify-between">
-                <label className="text-xs font-semibold text-slate-300 flex items-center gap-1.5">
-                  <Type className="w-3.5 h-3.5 text-indigo-400" />
-                  <span>Tamanho da Fonte</span>
-                </label>
-                <span className="text-xs font-mono font-bold text-indigo-400 bg-indigo-500/10 border border-indigo-500/20 px-2.5 py-0.5 rounded-full">
-                  {activeSlide.fontSize || 20}px
-                </span>
-              </div>
-
-              {/* Presets de Tamanho */}
-              <div className="grid grid-cols-5 gap-1">
-                {[
-                  { label: 'P', size: 16 },
-                  { label: 'M', size: 20 },
-                  { label: 'G', size: 24 },
-                  { label: 'GG', size: 30 },
-                  { label: 'XG', size: 38 },
-                ].map((preset) => (
+        {/* COLUNA 2: 🎯 Content Workspace (Painel Central: Canvas + Legenda Global Lado a Lado + Slides) */}
+        <main className="flex-1 bg-slate-950 flex flex-col justify-between p-4 overflow-hidden relative min-w-0">
+          {/* ÁREA CENTRAL LADO A LADO: Canvas do Slide (Esquerda) + Editor de Legenda Global (Direita) */}
+          <div className="flex-1 flex flex-col lg:flex-row items-center justify-center gap-6 overflow-hidden min-h-0 w-full">
+            {/* Lado Esquerdo do Centro: Slide Canvas com Zoom & Controles Flutuantes */}
+            <div className="flex-1 h-full flex flex-col items-center justify-center overflow-hidden min-h-0 relative w-full">
+              {/* Barra Flutuante de Proporção & Zoom */}
+              <div className="flex items-center gap-3 bg-slate-900/90 border border-slate-800 px-3.5 py-1 rounded-2xl shadow-xl backdrop-blur mb-2 z-10 shrink-0">
+                <div className="flex items-center gap-1.5">
+                  <span className="text-[11px] font-semibold text-slate-400">Proporção:</span>
                   <button
-                    key={preset.label}
                     type="button"
-                    onClick={() => handleFontSizeChange(preset.size)}
-                    className={`py-1 rounded-lg text-xs font-bold transition ${
-                      (activeSlide.fontSize || 20) === preset.size
-                        ? 'bg-indigo-600 text-white shadow-glow'
-                        : 'bg-slate-800 hover:bg-slate-700 text-slate-300'
+                    onClick={() => handleToggleAspectRatio('4:5')}
+                    className={`px-2.5 py-0.5 text-xs font-bold rounded-full transition ${
+                      (activeCarousel.aspectRatio || '4:5') === '4:5'
+                        ? 'bg-indigo-600 text-white shadow'
+                        : 'text-slate-400 hover:text-white'
                     }`}
                   >
-                    {preset.label}
+                    4:5
                   </button>
-                ))}
-              </div>
-
-              {/* Slider de Ajuste Fino */}
-              <input
-                type="range"
-                min="14"
-                max="48"
-                step="1"
-                value={activeSlide.fontSize || 20}
-                onChange={(e) => handleFontSizeChange(Number(e.target.value))}
-                className="w-full accent-indigo-500 bg-slate-800 h-1.5 rounded-lg cursor-pointer mt-1"
-              />
-            </div>
-          </CollapsibleSection>
-
-          {/* GRUPO 4: Presets de Temas de Cores */}
-          <CollapsibleSection
-            icon={<Palette className="w-4 h-4" />}
-            title="Tema de Cores do Slide"
-            badgeText={getSlideTheme(activeSlide.theme, activeSlide.background).name}
-            defaultOpen={true}
-          >
-            <div className="grid grid-cols-5 gap-2">
-              {(Object.keys(SLIDE_THEMES) as SlideTheme[]).map((themeId) => {
-                const themeItem = SLIDE_THEMES[themeId];
-                const activeThemeConfig = getSlideTheme(activeSlide.theme, activeSlide.background);
-                const isActive = activeThemeConfig.id === themeId;
-
-                return (
                   <button
-                    key={themeId}
-                    onClick={() => handleThemeChange(themeId)}
-                    className={`h-10 rounded-lg border-2 transition-all flex flex-col items-center justify-center relative shadow group ${
-                      isActive ? 'border-indigo-500 scale-105 ring-2 ring-indigo-500/50' : 'border-slate-700 hover:border-slate-500'
+                    type="button"
+                    onClick={() => handleToggleAspectRatio('1:1')}
+                    className={`px-2.5 py-0.5 text-xs font-bold rounded-full transition ${
+                      activeCarousel.aspectRatio === '1:1'
+                        ? 'bg-indigo-600 text-white shadow'
+                        : 'text-slate-400 hover:text-white'
                     }`}
-                    style={{ backgroundColor: themeItem.bg }}
-                    title={themeItem.name}
                   >
-                    <span
-                      className="text-xs font-bold"
-                      style={{ color: themeItem.text }}
-                    >
-                      Aa
-                    </span>
-                    {isActive && (
-                      <div className="absolute -top-1.5 -right-1.5 w-4 h-4 bg-indigo-600 text-white rounded-full flex items-center justify-center text-[10px] shadow">
-                        ✓
-                      </div>
-                    )}
-                  </button>
-                );
-              })}
-            </div>
-          </CollapsibleSection>
-        </aside>
-
-        {/* Middle Main Preview Center Canvas Area */}
-        <main className="flex-1 bg-slate-950 flex flex-col items-center justify-between p-6 overflow-hidden relative">
-          {/* BARRA FLUTUANTE SUPERIOR: Proporção, Zoom de Tela e Controles da Foto Ativa */}
-          <div className="flex flex-wrap items-center justify-center gap-3 bg-slate-900/90 border border-slate-800 px-4 py-2 rounded-2xl shadow-2xl backdrop-blur mb-2 z-20">
-            {/* Proporção */}
-            <div className="flex items-center gap-1.5">
-              <span className="text-[11px] font-semibold text-slate-400">Proporção:</span>
-              <button
-                onClick={() => handleToggleAspectRatio('4:5')}
-                className={`px-2.5 py-1 text-xs font-bold rounded-full transition ${
-                  (activeCarousel.aspectRatio || '4:5') === '4:5'
-                    ? 'bg-indigo-600 text-white shadow'
-                    : 'text-slate-400 hover:text-white'
-                }`}
-              >
-                4:5
-              </button>
-              <button
-                onClick={() => handleToggleAspectRatio('1:1')}
-                className={`px-2.5 py-1 text-xs font-bold rounded-full transition ${
-                  activeCarousel.aspectRatio === '1:1'
-                    ? 'bg-indigo-600 text-white shadow'
-                    : 'text-slate-400 hover:text-white'
-                }`}
-              >
-                1:1
-              </button>
-            </div>
-
-            <div className="w-px h-4 bg-slate-800 hidden sm:block" />
-
-            {/* Zoom do Canvas de Tela */}
-            <div className="flex items-center gap-1.5">
-              <ZoomIn className="w-3.5 h-3.5 text-slate-400" />
-              <span className="text-[11px] font-semibold text-slate-400">Zoom Tela:</span>
-              {[80, 100, 120, 150].map((zoomVal) => (
-                <button
-                  key={zoomVal}
-                  onClick={() => setCanvasZoom(zoomVal)}
-                  className={`px-2 py-0.5 text-xs font-bold rounded-md transition ${
-                    canvasZoom === zoomVal
-                      ? 'bg-slate-700 text-indigo-300 border border-indigo-500/40 shadow'
-                      : 'text-slate-400 hover:text-white'
-                  }`}
-                >
-                  {zoomVal}%
-                </button>
-              ))}
-            </div>
-
-            {/* CONTROLES DA FOTO SELECIONADA (EXIBIDO SE HOUVER IMAGEM NA FOTO ATIVA) */}
-            {activeSlide.layers.images?.[selectedImageIndex]?.source?.url && (
-              <>
-                <div className="w-px h-4 bg-slate-800 hidden sm:block" />
-                <div className="flex items-center gap-2 bg-slate-950 px-3 py-1 rounded-xl border border-indigo-500/30">
-                  <span className="text-[11px] font-bold text-indigo-300">
-                    Foto #{selectedImageIndex + 1}:
-                  </span>
-
-                  {/* Slider de Zoom da Foto */}
-                  <input
-                    type="range"
-                    min="1"
-                    max="3"
-                    step="0.05"
-                    value={activeSlide.layers.images[selectedImageIndex].scale ?? 1}
-                    onChange={(e) =>
-                      handleImageTransform(selectedImageIndex, { scale: parseFloat(e.target.value) })
-                    }
-                    className="w-20 h-1.5 bg-slate-700 rounded-lg appearance-none cursor-pointer accent-indigo-500"
-                    title="Zoom da Foto"
-                  />
-                  <span className="text-[11px] font-mono text-indigo-400 font-bold w-10">
-                    {Math.round((activeSlide.layers.images[selectedImageIndex].scale ?? 1) * 100)}%
-                  </span>
-
-                  <button
-                    onClick={() => handleImageTransform(selectedImageIndex, { scale: 1, offsetX: 0, offsetY: 0 })}
-                    className="p-1 text-slate-400 hover:text-white bg-slate-800 rounded transition"
-                    title="Resetar Zoom e Posição"
-                  >
-                    <RotateCcw className="w-3.5 h-3.5" />
-                  </button>
-
-                  <button
-                    onClick={() => {
-                      const updatedImages = [...(activeSlide.layers.images || [])];
-                      if (updatedImages[selectedImageIndex]) {
-                        updatedImages[selectedImageIndex] = {
-                          ...updatedImages[selectedImageIndex],
-                          source: { type: 'upload', url: '' },
-                        };
-                        updateActiveSlide((prev) => ({
-                          ...prev,
-                          layers: { ...prev.layers, images: updatedImages },
-                        }));
-                      }
-                    }}
-                    className="p-1 text-red-400 hover:text-red-300 bg-red-950/60 rounded transition border border-red-800/40"
-                    title="Remover foto do slide"
-                  >
-                    <Trash2 className="w-3.5 h-3.5" />
+                    1:1
                   </button>
                 </div>
-              </>
-            )}
-          </div>
 
-          {/* Visual Canvas Display Container com Zoom Aplicado */}
-          <div className="flex-1 w-full flex items-center justify-center overflow-auto py-2 transition-transform duration-150">
-            <div
-              className="flex items-center justify-center transition-all duration-200"
-              style={{
-                transform: `scale(${canvasZoom / 100})`,
-                transformOrigin: 'center center',
-              }}
-            >
-              <SlideCanvas
-                ref={activeSlideRef}
-                slide={activeSlide}
-                profile={profile}
-                aspectRatio={activeCarousel.aspectRatio || '4:5'}
-                onImageTransform={handleImageTransform}
-                onAssignMedia={handleAssignMediaToSlide}
+                <div className="w-px h-4 bg-slate-800" />
+
+                <div className="flex items-center gap-1.5">
+                  <ZoomIn className="w-3.5 h-3.5 text-slate-400" />
+                  <span className="text-[11px] font-semibold text-slate-400">Zoom Tela:</span>
+                  {(['fit', 80, 100, 120] as const).map((zoomVal) => (
+                    <button
+                      key={zoomVal}
+                      type="button"
+                      onClick={() => setCanvasZoom(zoomVal)}
+                      className={`px-2 py-0.5 text-xs font-bold rounded-md transition ${
+                        canvasZoom === zoomVal
+                          ? 'bg-slate-700 text-indigo-300 border border-indigo-500/40 shadow'
+                          : 'text-slate-400 hover:text-white'
+                      }`}
+                    >
+                      {zoomVal === 'fit' ? 'Fit' : `${zoomVal}%`}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Display do Canvas */}
+              <div
+                ref={canvasContainerRef}
+                className="flex-1 w-full flex items-center justify-center overflow-hidden py-1 transition-all duration-150 min-h-0"
+              >
+                <div
+                  className="flex items-center justify-center transition-all duration-200"
+                  style={{
+                    transform: `scale(${effectiveZoomScale})`,
+                    transformOrigin: 'center center',
+                  }}
+                >
+                  <SlideCanvas
+                    ref={activeSlideRef}
+                    slide={activeSlide}
+                    profile={profile}
+                    aspectRatio={activeCarousel.aspectRatio || '4:5'}
+                    onImageTransform={handleImageTransform}
+                    onAssignMedia={handleAssignMediaToSlide}
+                  />
+                </div>
+              </div>
+            </div>
+
+            {/* Lado Direito do Centro: Editor de Legenda Global (Post Caption) */}
+            <div className="w-full lg:w-[340px] xl:w-[380px] h-auto max-h-full bg-slate-900/80 border border-slate-800 rounded-2xl p-4 flex flex-col shrink-0 shadow-card self-center my-auto overflow-y-auto scrollbar-thin">
+              <PostCaptionEditor
+                caption={activeCarousel.caption || ''}
+                selectedChannels={activeCarousel.selectedChannels || ['instagram', 'linkedin']}
+                connectedChannels={connectedChannels}
+                isBufferConnected={isBufferConnected}
+                onCaptionChange={handleCaptionChange}
+                onToggleChannel={handleToggleChannel}
+                onOpenIntegrations={() => setIsIntegrationsModalOpen(true)}
               />
             </div>
           </div>
 
-          {/* Bottom Interactive Slide Reorder Toolbar Bar */}
-          <SlideReorderBar
-            slides={activeCarousel.slides}
-            activeIndex={activeSlideIndex}
-            onSelectSlide={(idx) => setActiveSlideIndex(idx)}
-            onAddSlide={handleAddSlide}
-            onInsertSlideAt={handleInsertSlideAt}
-            onDuplicateSlide={handleDuplicateSlide}
-            onDeleteSlide={handleDeleteSlide}
-            onMoveSlide={handleMoveSlide}
-            onAssignMedia={handleAssignMediaToSlide}
-            onCreateSlideFromMedia={handleCreateSlideFromMedia}
-          />
+          {/* Rodapé Central: Barra de Reordenação de Slides */}
+          <div className="w-full pt-3 shrink-0">
+            <SlideReorderBar
+              slides={activeCarousel.slides}
+              activeIndex={activeSlideIndex}
+              onSelectSlide={(idx) => setActiveSlideIndex(idx)}
+              onAddSlide={handleAddSlide}
+              onInsertSlideAt={handleInsertSlideAt}
+              onDuplicateSlide={handleDuplicateSlide}
+              onDeleteSlide={handleDeleteSlide}
+              onMoveSlide={handleMoveSlide}
+              onAssignMedia={handleAssignMediaToSlide}
+              onCreateSlideFromMedia={handleCreateSlideFromMedia}
+            />
+          </div>
         </main>
+
+        {/* COLUNA 3: ➡️ Social Post Preview (Painel Direito - Recolhível) */}
+        <SocialPostPreviewPanel
+          carousel={activeCarousel}
+          profile={profile}
+          selectedChannels={activeCarousel.selectedChannels || ['instagram', 'linkedin']}
+          onToggleChannel={handleToggleChannel}
+          isOpen={isRightPanelOpen}
+          onToggleOpen={() => setIsRightPanelOpen(!isRightPanelOpen)}
+        />
       </div>
 
-      {/* Hidden Slide Elements para Captura do Carrossel Inteiro */}
-      <div className="fixed top-0 left-[-9999px] pointer-events-none -z-50 flex flex-col gap-4">
+      {/* Hidden Slide Elements para Captura */}
+      <div className="fixed top-[-9999px] left-[-9999px] opacity-0 pointer-events-none">
         {activeCarousel.slides.map((s, idx) => (
-          <div key={s.id} className="w-[540px]">
+          <div
+            key={s.id}
+            ref={(el) => {
+              hiddenSlideRefs.current[idx] = el;
+            }}
+          >
             <SlideCanvas
-              ref={(el) => {
-                hiddenSlideRefs.current[idx] = el;
-              }}
               slide={s}
               profile={profile}
               aspectRatio={activeCarousel.aspectRatio || '4:5'}
@@ -688,7 +754,11 @@ export default function BliipApp() {
               </button>
 
               <button
-                onClick={handleCreateNewCarouselSubmit}
+                onClick={() => {
+                  handleCreateNewCarousel(newCarouselSlideCount);
+                  setIsNewCarouselModalOpen(false);
+                  setViewMode('editor');
+                }}
                 className="px-5 py-2.5 text-xs font-bold bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl shadow-glow transition flex items-center gap-1.5"
               >
                 <Plus className="w-4 h-4" />

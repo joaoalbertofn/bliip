@@ -3,6 +3,8 @@ import { ContentType, LayoutStyle } from '@/types/carousel';
 import { CONTENT_TYPES, LAYOUT_STYLES } from '@/lib/templates';
 import { Layout, FileText, Image as ImageIcon, Layers, Sparkles, Twitter } from 'lucide-react';
 
+import { canChangeContentType } from '@/domain';
+
 interface TemplateSelectorProps {
   currentContentType: ContentType;
   currentLayoutStyle: LayoutStyle;
@@ -94,7 +96,7 @@ export const TemplateSelector: React.FC<TemplateSelectorProps> = ({
         <div className="grid grid-cols-3 gap-1.5">
           {Object.values(CONTENT_TYPES).map((type) => {
             const isSelected = type.id === currentContentType;
-            const isDisabled = currentLayoutStyle === 'comparison' && type.id !== 'text_2_images';
+            const isDisabled = !canChangeContentType(currentLayoutStyle, type.id);
 
             return (
               <button

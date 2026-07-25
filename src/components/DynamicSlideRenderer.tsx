@@ -28,9 +28,11 @@ export const DynamicSlideRenderer: React.FC<DynamicSlideRendererProps> = ({
   const signatureLayer = slide.layers.text?.find((t) => t.role === 'signature');
 
   const quoteText = quoteLayer?.content || content;
-  const isLongText = quoteText.length > 140;
   const images = slide.layers.images || [];
   const isHorizontal = slide.imageLayout === 'horizontal';
+
+  // Tamanho dinâmico da fonte vindo do slide (Padrão: 20px)
+  const customFontSize = slide.fontSize ?? 20;
 
   // Processar marcações <mark> com as cores do tema ativo
   const processMarkTags = (htmlText: string) => {
@@ -41,11 +43,11 @@ export const DynamicSlideRenderer: React.FC<DynamicSlideRendererProps> = ({
     );
   };
 
-  // Formatação de parágrafos e diálogos
+  // Formatação de parágrafos e diálogos usando customFontSize
   const renderFormattedText = (rawText: string) => {
     if (!rawText) {
       return (
-        <span className="italic text-base opacity-60" style={{ color: theme.textSecondary }}>
+        <span className="italic opacity-60" style={{ color: theme.textSecondary, fontSize: `${customFontSize}px` }}>
           Escreva o conteúdo do slide aqui...
         </span>
       );
@@ -60,16 +62,20 @@ export const DynamicSlideRenderer: React.FC<DynamicSlideRendererProps> = ({
         const speaker = dialogueMatch[1];
         const dialogueBody = dialogueMatch[2];
         return (
-          <div key={idx} className="mb-4 last:mb-0">
+          <div key={idx} className="mb-3 last:mb-0">
             <span
-              className="font-extrabold px-2 py-0.5 rounded mr-2 inline-block text-lg"
-              style={{ backgroundColor: theme.speakerBg, color: theme.speakerText }}
+              className="font-extrabold px-2 py-0.5 rounded mr-2 inline-block"
+              style={{
+                backgroundColor: theme.speakerBg,
+                color: theme.speakerText,
+                fontSize: `${Math.max(12, Math.round(customFontSize * 0.85))}px`,
+              }}
             >
               {speaker}:
             </span>
             <span
-              className="leading-relaxed text-lg font-medium"
-              style={{ color: theme.text }}
+              className="leading-relaxed font-medium"
+              style={{ color: theme.text, fontSize: `${customFontSize}px`, lineHeight: 1.4 }}
               dangerouslySetInnerHTML={{ __html: dialogueBody }}
             />
           </div>
@@ -79,8 +85,8 @@ export const DynamicSlideRenderer: React.FC<DynamicSlideRendererProps> = ({
       return (
         <p
           key={idx}
-          className="mb-4 last:mb-0 text-lg leading-relaxed font-normal text-left"
-          style={{ color: theme.text }}
+          className="mb-3 last:mb-0 leading-relaxed font-normal text-left"
+          style={{ color: theme.text, fontSize: `${customFontSize}px`, lineHeight: 1.4 }}
           dangerouslySetInnerHTML={{ __html: p }}
         />
       );
@@ -96,14 +102,14 @@ export const DynamicSlideRenderer: React.FC<DynamicSlideRendererProps> = ({
       case 'title_text':
         const titleText = slide.title || (slide.layoutStyle === 'news_article' ? 'MAS O PROCESSO NÃO SE RESUME A CORTAR.' : 'Essa é a foto mais incrível da história:');
         return (
-          <div key={idx} className="shrink-0 my-1 w-full text-left">
+          <div key={idx} className="shrink-0 my-0.5 w-full text-left">
             <h2
               className={`tracking-tight leading-tight ${
                 slide.layoutStyle === 'news_article'
-                  ? 'text-2xl font-black uppercase'
-                  : 'text-lg font-bold'
+                  ? 'font-black uppercase'
+                  : 'font-bold'
               }`}
-              style={{ color: theme.text }}
+              style={{ color: theme.text, fontSize: `${Math.round(customFontSize * 1.25)}px`, lineHeight: 1.25 }}
               dangerouslySetInnerHTML={{ __html: processMarkTags(titleText) }}
             />
           </div>
@@ -111,7 +117,7 @@ export const DynamicSlideRenderer: React.FC<DynamicSlideRendererProps> = ({
 
       case 'body_text':
         return (
-          <div key={idx} className="shrink-0 w-full">
+          <div key={idx} className="shrink-0 w-full overflow-hidden">
             {renderFormattedText(content)}
           </div>
         );
@@ -121,12 +127,12 @@ export const DynamicSlideRenderer: React.FC<DynamicSlideRendererProps> = ({
           <div key={idx} className="my-auto max-w-lg w-full flex flex-col items-center justify-center">
             {quoteText ? (
               <p
-                className={`leading-relaxed font-serif text-center ${isLongText ? 'text-xl' : 'text-2xl font-medium'}`}
-                style={{ color: theme.text }}
+                className="leading-relaxed font-serif text-center font-medium"
+                style={{ color: theme.text, fontSize: `${Math.round(customFontSize * 1.2)}px`, lineHeight: 1.35 }}
                 dangerouslySetInnerHTML={{ __html: processMarkTags(quoteText) }}
               />
             ) : (
-              <p className="italic text-xl font-serif opacity-50 text-center" style={{ color: theme.textSecondary }}>
+              <p className="italic font-serif opacity-50 text-center" style={{ color: theme.textSecondary, fontSize: `${customFontSize}px` }}>
                 "Digite a citação..."
               </p>
             )}
@@ -135,8 +141,8 @@ export const DynamicSlideRenderer: React.FC<DynamicSlideRendererProps> = ({
 
       case 'signature_text':
         return (
-          <div key={idx} className="mt-auto pt-2 pb-1 w-full text-center flex justify-center items-center">
-            <span className="font-handwriting text-3xl tracking-wider font-semibold italic" style={{ color: theme.text }}>
+          <div key={idx} className="mt-auto pt-2 pb-1 w-full text-center flex justify-center items-center shrink-0">
+            <span className="font-handwriting tracking-wider font-semibold italic text-2xl" style={{ color: theme.text }}>
               {signatureLayer?.content || profile.name}
             </span>
           </div>
@@ -144,9 +150,9 @@ export const DynamicSlideRenderer: React.FC<DynamicSlideRendererProps> = ({
 
       case 'badge_icon':
         return (
-          <div key={idx} className="flex flex-col items-center gap-2">
+          <div key={idx} className="flex flex-col items-center gap-2 shrink-0">
             <div
-              className="w-20 h-20 rounded-full p-1 shadow-2xl border flex items-center justify-center"
+              className="w-16 h-16 rounded-full p-1 shadow-2xl border flex items-center justify-center"
               style={{ backgroundColor: theme.cardBg, borderColor: theme.borderColor }}
             >
               <img
@@ -155,7 +161,7 @@ export const DynamicSlideRenderer: React.FC<DynamicSlideRendererProps> = ({
                 className="w-full h-full rounded-full object-cover"
               />
             </div>
-            <span className="text-xs font-bold tracking-widest uppercase opacity-80" style={{ color: theme.textSecondary }}>
+            <span className="text-[11px] font-bold tracking-widest uppercase opacity-80" style={{ color: theme.textSecondary }}>
               {profile.name}
             </span>
           </div>
@@ -169,7 +175,7 @@ export const DynamicSlideRenderer: React.FC<DynamicSlideRendererProps> = ({
             imageIndex={0}
             onImageTransform={onImageTransform}
             onAssignMedia={(idx, droppedUrl) => onAssignMedia?.(slide.id, idx, droppedUrl)}
-            className="flex-1 min-h-[220px] w-full group"
+            className="flex-1 min-h-0 w-full h-full group"
             cardBg={theme.cardBg}
             borderColor={theme.borderColor}
             textSecondary={theme.textSecondary}
@@ -181,11 +187,11 @@ export const DynamicSlideRenderer: React.FC<DynamicSlideRendererProps> = ({
         return (
           <div
             key={idx}
-            className={`flex-1 h-full w-full min-h-0 flex ${
+            className={`flex-1 min-h-0 h-full w-full flex ${
               isHorizontal ? 'flex-row gap-2' : 'flex-col gap-2'
             }`}
           >
-            <div className="flex-1 h-full w-full min-h-0 flex flex-col relative group">
+            <div className="flex-1 min-h-0 h-full w-full flex flex-col relative group">
               {captions[0] && (
                 <span className="text-xs font-bold mb-1 block text-left shrink-0" style={{ color: theme.text }}>
                   {captions[0]}
@@ -196,7 +202,7 @@ export const DynamicSlideRenderer: React.FC<DynamicSlideRendererProps> = ({
                 imageIndex={0}
                 onImageTransform={onImageTransform}
                 onAssignMedia={(idx, droppedUrl) => onAssignMedia?.(slide.id, idx, droppedUrl)}
-                className="flex-1 h-full w-full"
+                className="flex-1 min-h-0 h-full w-full"
                 fallbackText="Imagem 1"
                 cardBg={theme.cardBg}
                 borderColor={theme.borderColor}
@@ -204,7 +210,7 @@ export const DynamicSlideRenderer: React.FC<DynamicSlideRendererProps> = ({
               />
             </div>
 
-            <div className="flex-1 h-full w-full min-h-0 flex flex-col relative group">
+            <div className="flex-1 min-h-0 h-full w-full flex flex-col relative group">
               {captions[1] && (
                 <span className="text-xs font-bold mb-1 block text-left shrink-0" style={{ color: theme.text }}>
                   {captions[1]}
@@ -215,7 +221,7 @@ export const DynamicSlideRenderer: React.FC<DynamicSlideRendererProps> = ({
                 imageIndex={1}
                 onImageTransform={onImageTransform}
                 onAssignMedia={(idx, droppedUrl) => onAssignMedia?.(slide.id, idx, droppedUrl)}
-                className="flex-1 h-full w-full"
+                className="flex-1 min-h-0 h-full w-full"
                 fallbackText="Imagem 2"
                 cardBg={theme.cardBg}
                 borderColor={theme.borderColor}
@@ -237,10 +243,10 @@ export const DynamicSlideRenderer: React.FC<DynamicSlideRendererProps> = ({
   if (schema.container.layout === 'centered_card') {
     return (
       <div
-        className="w-full h-full flex flex-col justify-between p-6 transition-colors duration-200"
+        className="w-full h-full min-h-0 flex flex-col justify-between p-6 overflow-hidden transition-colors duration-200"
         style={{ backgroundColor: theme.bg }}
       >
-        <div className="my-auto flex flex-col justify-center items-center w-full max-w-lg mx-auto py-4 gap-4">
+        <div className="my-auto flex flex-col justify-center items-center w-full max-w-lg mx-auto py-2 gap-3 overflow-hidden">
           {schema.blocks.map((block, idx) => renderBlock(block, idx))}
         </div>
       </div>
@@ -254,7 +260,7 @@ export const DynamicSlideRenderer: React.FC<DynamicSlideRendererProps> = ({
     if (topImageBlock) {
       return (
         <div
-          className="w-full h-full flex flex-col relative overflow-hidden transition-colors duration-200"
+          className="w-full h-full min-h-0 flex flex-col relative overflow-hidden transition-colors duration-200"
           style={{ backgroundColor: theme.bg }}
         >
           {/* Seção da Imagem no Topo (55% da altura) */}
@@ -265,7 +271,7 @@ export const DynamicSlideRenderer: React.FC<DynamicSlideRendererProps> = ({
           {/* ÚNICA foto de perfil na linha de separação */}
           <div className="absolute top-[55%] left-1/2 -translate-x-1/2 -translate-y-1/2 z-20">
             <div
-              className="w-20 h-20 rounded-full p-1.5 shadow-xl border flex items-center justify-center"
+              className="w-16 h-16 rounded-full p-1 shadow-xl border flex items-center justify-center"
               style={{ backgroundColor: theme.cardBg, borderColor: theme.borderColor }}
             >
               <img
@@ -278,7 +284,7 @@ export const DynamicSlideRenderer: React.FC<DynamicSlideRendererProps> = ({
 
           {/* Seção de Texto da Base */}
           <div
-            className="flex-1 w-full pt-12 pb-4 px-6 flex flex-col justify-between items-center text-center overflow-hidden"
+            className="flex-1 min-h-0 w-full pt-10 pb-4 px-6 flex flex-col justify-between items-center text-center overflow-hidden"
             style={{ backgroundColor: theme.bg }}
           >
             {schema.blocks.map((block, idx) => {
@@ -294,7 +300,7 @@ export const DynamicSlideRenderer: React.FC<DynamicSlideRendererProps> = ({
   // CASO 3: Container Flex Padrão (Coluna Vertical)
   return (
     <div
-      className={`w-full h-full flex flex-col ${schema.container.padding || 'p-6'} ${schema.container.gap || 'gap-3'} transition-colors duration-200`}
+      className={`w-full h-full min-h-0 flex flex-col overflow-hidden ${schema.container.padding || 'p-6'} ${schema.container.gap || 'gap-3'} transition-colors duration-200`}
       style={{ backgroundColor: theme.bg }}
     >
       {schema.blocks.map((block, idx) => renderBlock(block, idx))}

@@ -104,6 +104,9 @@ export async function triggerWebhookIntegration(
   }
 }
 
+import { PublisherRegistry } from './publishers';
+import { PublishResult } from './publishers/PublishingAdapter';
+
 export async function publishToBufferApi(
   carousel: Carousel,
   profile: UserProfile,
@@ -113,40 +116,20 @@ export async function publishToBufferApi(
     postType?: string;
     network?: string;
   }
-): Promise<{ success: boolean; message: string }> {
-  if (!config.bufferApiKey) {
-    return { success: false, message: 'Chave da API do Buffer não configurada.' };
+): Promise<PublishResult> {
+  const publisher = PublisherRegistry.getPublisher('buffer');
+  if (!publisher) {
+    return { success: false, message: 'Adaptador de publicação do Buffer não encontrado.' };
   }
 
-  const profileId = config.bufferProfileId;
   const mediaUrls = Array.isArray(media) ? media : [media];
-  const text = `${carousel.name}\n\nPost criado via Bliip (${profile.handle || profile.name})`;
+  const payload = {
+    carouselId: carousel.id,
+    carouselName: carousel.name,
+    caption: carousel.caption || '',
+    mediaUrls: mediaUrls,
+    targetChannels: carousel.selectedChannels || ['instagram', 'linkedin'],
+  };
 
-  try {
-    const res = await fetch('/api/buffer', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${config.bufferApiKey.trim()}`,
-      },
-      body: JSON.stringify({
-        profileId: profileId,
-        text: text,
-        mediaUrls: mediaUrls,
-        postType: options?.postType || 'carousel',
-        network: options?.network || 'instagram',
-        now: true,
-      })
-    });
-
-    const data = await res.json();
-    if (res.ok && data.success) {
-      return { success: true, message: 'Conteúdo enviado ao Buffer com sucesso!' };
-    } else {
-      const errorMsg = data.message || data.error || (typeof data.details === 'string' ? data.details : JSON.stringify(data.details)) || 'Erro ao publicar no Buffer.';
-      return { success: false, message: errorMsg };
-    }
-  } catch (err: any) {
-    return { success: false, message: `Falha na requisição ao Buffer: ${err.message}` };
-  }
+  return publisher.publish(payload, config);
 }

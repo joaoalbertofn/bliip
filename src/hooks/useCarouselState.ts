@@ -1,8 +1,9 @@
 import { useState, useEffect } from 'react';
-import { Carousel, Slide, UserProfile, ImageSource, ContentType, LayoutStyle } from '@/types/carousel';
-import { loadCarousels, saveCarousels } from '@/lib/storage';
+import { Carousel, Slide, UserProfile, ImageSource, ContentType, LayoutStyle, SocialChannel } from '@/types/carousel';
+import { loadCarousels, saveCarousels, loadUserPreferences, saveUserPreferences, DEFAULT_USER_PREFERENCES } from '@/lib/storage';
 import { createSlide } from '@/lib/templates';
 import { SlideTheme, SLIDE_THEMES } from '@/lib/themes';
+import { validateFontSize, canDeleteSlide, canAddSlide } from '@/domain';
 
 export function useCarouselState(profile: UserProfile) {
   const [carousels, setCarousels] = useState<Carousel[]>([]);
@@ -98,17 +99,21 @@ export function useCarouselState(profile: UserProfile) {
 
   const handleToggleAspectRatio = (aspectRatio: '4:5' | '1:1') => {
     if (!activeCarousel) return;
+    saveUserPreferences({ aspectRatio });
     const updated = carousels.map((c) => (c.id === activeCarousel.id ? { ...c, aspectRatio } : c));
     saveCurrentCarouselsState(updated);
   };
 
-  const handleCreateNewCarousel = (newCarouselSlideCount: number = 4) => {
+  const handleCreateNewCarousel = async (newCarouselSlideCount: number = 4) => {
+    const prefs = await loadUserPreferences();
     const newSlides: Slide[] = [];
-    const contentTypes: ContentType[] = ['text_1_image', 'text_only', 'text_2_images', 'text_1_image'];
-    const styles: LayoutStyle[] = ['twitter', 'twitter', 'twitter', 'immersive'];
 
     for (let i = 0; i < newCarouselSlideCount; i++) {
-      newSlides.push(createSlide(contentTypes[i % contentTypes.length], styles[i % styles.length]));
+      const slide = createSlide(prefs.contentType || 'text_1_image', prefs.layoutStyle || 'twitter');
+      if (prefs.theme) {
+        slide.theme = prefs.theme;
+      }
+      newSlides.push(slide);
     }
 
     const newCarousel: Carousel = {
@@ -118,7 +123,8 @@ export function useCarouselState(profile: UserProfile) {
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
       status: 'draft',
-      aspectRatio: '4:5',
+      aspectRatio: prefs.aspectRatio || '4:5',
+      selectedChannels: prefs.selectedChannels || ['instagram', 'linkedin'],
     };
 
     const updated = [newCarousel, ...carousels];
@@ -173,6 +179,7 @@ export function useCarouselState(profile: UserProfile) {
   };
 
   const handleSelectContentType = (contentType: ContentType) => {
+    saveUserPreferences({ contentType });
     updateActiveSlide((prev) => {
       const maxImages = contentType === 'text_2_images' ? 2 : contentType === 'text_1_image' ? 1 : 0;
       const images = [...(prev.layers.images || [])];
@@ -191,6 +198,7 @@ export function useCarouselState(profile: UserProfile) {
   };
 
   const handleSelectLayoutStyle = (layoutStyle: LayoutStyle) => {
+    saveUserPreferences({ layoutStyle });
     updateActiveSlide((prev) => {
       const isComparison = layoutStyle === 'comparison';
       return {
@@ -274,6 +282,7 @@ export function useCarouselState(profile: UserProfile) {
 
   const handleThemeChange = (themeId: SlideTheme) => {
     const themeConfig = SLIDE_THEMES[themeId];
+    saveUserPreferences({ theme: themeId });
     updateActiveSlide((prev) => ({
       ...prev,
       theme: themeId,
@@ -318,11 +327,12 @@ export function useCarouselState(profile: UserProfile) {
   };
 
   const handleFontSizeChange = (fontSize: number) => {
-    updateActiveSlide((prev) => ({ ...prev, fontSize }));
+    const validSize = validateFontSize(fontSize);
+    updateActiveSlide((prev) => ({ ...prev, fontSize: validSize }));
   };
 
   const handleAddSlide = () => {
-    if (!activeCarousel) return;
+    if (!activeCarousel || !canAddSlide(activeCarousel.slides.length)) return;
     const newSlide = createSlide('text_1_image', 'twitter');
     const updatedSlides = [...activeCarousel.slides, newSlide];
     const updatedCarousels = carousels.map((c) =>
@@ -333,7 +343,7 @@ export function useCarouselState(profile: UserProfile) {
   };
 
   const handleInsertSlideAt = (insertIndex: number) => {
-    if (!activeCarousel) return;
+    if (!activeCarousel || !canAddSlide(activeCarousel.slides.length)) return;
     const newSlide = createSlide('text_1_image', 'twitter');
     const updatedSlides = [...activeCarousel.slides];
     updatedSlides.splice(insertIndex, 0, newSlide);
@@ -346,7 +356,7 @@ export function useCarouselState(profile: UserProfile) {
   };
 
   const handleDuplicateSlide = (index: number) => {
-    if (!activeCarousel) return;
+    if (!activeCarousel || !canAddSlide(activeCarousel.slides.length)) return;
     const slideToDup = activeCarousel.slides[index];
     const duplicated: Slide = JSON.parse(JSON.stringify(slideToDup));
     duplicated.id = `slide_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`;
@@ -362,7 +372,7 @@ export function useCarouselState(profile: UserProfile) {
   };
 
   const handleDeleteSlide = (index: number) => {
-    if (!activeCarousel || activeCarousel.slides.length <= 1) return;
+    if (!activeCarousel || !canDeleteSlide(activeCarousel.slides.length)) return;
     const updatedSlides = activeCarousel.slides.filter((_, idx) => idx !== index);
     const updatedCarousels = carousels.map((c) =>
       c.id === activeCarousel.id ? { ...c, slides: updatedSlides } : c
@@ -486,6 +496,33 @@ export function useCarouselState(profile: UserProfile) {
     setActiveSlideIndex(updatedSlides.length - 1);
   };
 
+  const handleCaptionChange = (caption: string) => {
+    if (!activeCarousel) return;
+    const updatedCarousels = carousels.map((c) =>
+      c.id === activeCarousel.id ? { ...c, caption } : c
+    );
+    saveCurrentCarouselsState(updatedCarousels);
+  };
+
+  const handleToggleChannel = (channel: SocialChannel) => {
+    if (!activeCarousel) return;
+    const currentChannels = activeCarousel.selectedChannels || ['instagram', 'linkedin'];
+    const exists = currentChannels.includes(channel);
+    let newChannels: SocialChannel[];
+    if (exists) {
+      if (currentChannels.length <= 1) return; // Mantém ao menos 1 canal ativo
+      newChannels = currentChannels.filter((ch) => ch !== channel);
+    } else {
+      newChannels = [...currentChannels, channel];
+    }
+
+    saveUserPreferences({ selectedChannels: newChannels });
+    const updatedCarousels = carousels.map((c) =>
+      c.id === activeCarousel.id ? { ...c, selectedChannels: newChannels } : c
+    );
+    saveCurrentCarouselsState(updatedCarousels);
+  };
+
   return {
     carousels,
     setCarousels,
@@ -523,5 +560,7 @@ export function useCarouselState(profile: UserProfile) {
     handleRemoveMediaFromTray,
     handleAssignMediaToSlide,
     handleCreateSlideFromMedia,
+    handleCaptionChange,
+    handleToggleChannel,
   };
 }

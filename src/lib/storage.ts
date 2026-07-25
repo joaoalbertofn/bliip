@@ -1,13 +1,31 @@
 import { get, set } from 'idb-keyval';
-import { Carousel, Slide, UserProfile, IntegrationConfig, ContentType, LayoutStyle } from '@/types/carousel';
+import { Carousel, Slide, UserProfile, IntegrationConfig, ContentType, LayoutStyle, SocialChannel } from '@/types/carousel';
+import { SlideTheme } from '@/lib/themes';
 
 const USER_PROFILE_KEY = 'bliip_user_profile';
 const CAROUSELS_KEY = 'bliip_carousels';
 const INTEGRATIONS_KEY = 'bliip_integrations';
+const USER_PREFERENCES_KEY = 'bliip_user_preferences';
+
+export interface UserCreationPreferences {
+  layoutStyle: LayoutStyle;
+  contentType: ContentType;
+  selectedChannels: SocialChannel[];
+  aspectRatio: '4:5' | '1:1';
+  theme?: SlideTheme;
+}
+
+export const DEFAULT_USER_PREFERENCES: UserCreationPreferences = {
+  layoutStyle: 'twitter',
+  contentType: 'text_1_image',
+  selectedChannels: ['instagram', 'linkedin'],
+  aspectRatio: '4:5',
+  theme: 'dark',
+};
 
 export const DEFAULT_USER_PROFILE: UserProfile = {
-  name: 'Bruno Perini',
-  handle: '@bruno_perini',
+  name: 'João Alberto',
+  handle: '@joaoalbertofn',
   avatarUrl: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=250&h=250&q=80',
 };
 
@@ -72,6 +90,10 @@ export function sanitizeCarousel(c: any): Carousel {
     status: c?.status === 'sent' ? 'sent' : 'draft',
     aspectRatio: c?.aspectRatio === '1:1' ? '1:1' : '4:5',
     mediaLibrary: Array.isArray(c?.mediaLibrary) ? c.mediaLibrary : [],
+    caption: typeof c?.caption === 'string' ? c.caption : '',
+    selectedChannels: Array.isArray(c?.selectedChannels) && c.selectedChannels.length > 0
+      ? c.selectedChannels
+      : ['instagram', 'linkedin'],
     slides: rawSlides.map(sanitizeSlide),
   };
 }
@@ -112,6 +134,31 @@ export async function saveUserProfile(profile: UserProfile): Promise<void> {
     console.warn('Fallback para localStorage ao salvar perfil:', e);
   }
   localStorage.setItem(USER_PROFILE_KEY, JSON.stringify(sanitized));
+}
+
+export async function loadUserPreferences(): Promise<UserCreationPreferences> {
+  if (typeof window === 'undefined') return DEFAULT_USER_PREFERENCES;
+  try {
+    const val = await get<any>(USER_PREFERENCES_KEY);
+    if (val) return { ...DEFAULT_USER_PREFERENCES, ...val };
+    const localVal = localStorage.getItem(USER_PREFERENCES_KEY);
+    if (localVal) return { ...DEFAULT_USER_PREFERENCES, ...JSON.parse(localVal) };
+  } catch (e) {
+    console.warn('Erro ao carregar preferências:', e);
+  }
+  return DEFAULT_USER_PREFERENCES;
+}
+
+export async function saveUserPreferences(prefs: Partial<UserCreationPreferences>): Promise<void> {
+  if (typeof window === 'undefined') return;
+  try {
+    const current = await loadUserPreferences();
+    const updated = { ...current, ...prefs };
+    await set(USER_PREFERENCES_KEY, updated);
+    localStorage.setItem(USER_PREFERENCES_KEY, JSON.stringify(updated));
+  } catch (e) {
+    console.warn('Fallback para localStorage ao salvar preferências:', e);
+  }
 }
 
 export async function loadCarousels(): Promise<Carousel[]> {

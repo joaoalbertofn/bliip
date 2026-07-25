@@ -40,6 +40,8 @@ export type Slide = {
   background?: string;
 };
 
+export type SocialChannel = 'instagram' | 'linkedin' | 'youtube' | 'tiktok';
+
 export type Carousel = {
   id: string;
   name: string;
@@ -49,6 +51,8 @@ export type Carousel = {
   status?: "draft" | "sent";
   aspectRatio?: "4:5" | "1:1";
   mediaLibrary?: string[];
+  caption?: string; // Legenda global do post (usada no Instagram, LinkedIn, etc)
+  selectedChannels?: SocialChannel[]; // Canais selecionados para publicação
 };
 
 export type UserProfile = {

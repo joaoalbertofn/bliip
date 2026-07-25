@@ -80,17 +80,17 @@ export const SlideReorderBar: React.FC<SlideReorderBarProps> = ({
   };
 
   return (
-    <div className="w-full bg-slate-900 border-t border-slate-800 p-4 flex flex-col gap-3 relative">
+    <div className="w-full bg-slate-900 border-t border-slate-800 px-4 py-1.5 flex flex-col gap-1.5 relative shrink-0">
       {/* Controles de Cabeçalho (Status e Reordenação) */}
-      <div className="flex items-center justify-between px-2 text-xs font-semibold text-slate-400">
+      <div className="flex items-center justify-between px-1 text-xs font-semibold text-slate-400">
         <div className="flex items-center gap-2">
-          <span>SLIDES DO CARROSSEL ({slides.length})</span>
+          <span className="font-bold text-slate-300">SLIDES DO CARROSSEL ({slides.length})</span>
           <span className="text-[10px] font-normal text-slate-500 hidden sm:inline">
-            • Arraste ou use os botões + entre slides para inserir ou solte fotos da galeria
+            • Arraste ou use + para inserir ou solte fotos
           </span>
         </div>
 
-        <div className="flex items-center gap-2 bg-slate-950 px-3 py-1 rounded-xl border border-slate-800">
+        <div className="flex items-center gap-1.5 bg-slate-950 px-2.5 py-0.5 rounded-lg border border-slate-800">
           <span className="text-[11px] text-slate-300 font-bold mr-1">
             Slide #{activeIndex + 1} selecionado
           </span>
@@ -98,7 +98,7 @@ export const SlideReorderBar: React.FC<SlideReorderBarProps> = ({
           <button
             onClick={() => onMoveSlide(activeIndex, activeIndex - 1)}
             disabled={activeIndex === 0}
-            className="p-1 px-2 rounded bg-slate-800 hover:bg-slate-700 disabled:opacity-30 transition text-slate-200 flex items-center gap-1 text-[11px]"
+            className="p-1 px-1.5 rounded bg-slate-800 hover:bg-slate-700 disabled:opacity-30 transition text-slate-200 flex items-center gap-1 text-[10px]"
             title="Mover slide para esquerda"
           >
             <ArrowLeft className="w-3 h-3" />
@@ -108,18 +108,18 @@ export const SlideReorderBar: React.FC<SlideReorderBarProps> = ({
           <button
             onClick={() => onMoveSlide(activeIndex, activeIndex + 1)}
             disabled={activeIndex === slides.length - 1}
-            className="p-1 px-2 rounded bg-slate-800 hover:bg-slate-700 disabled:opacity-30 transition text-slate-200 flex items-center gap-1 text-[11px]"
+            className="p-1 px-1.5 rounded bg-slate-800 hover:bg-slate-700 disabled:opacity-30 transition text-slate-200 flex items-center gap-1 text-[10px]"
             title="Mover slide para direita"
           >
             <span>Mover Dir.</span>
             <ArrowRight className="w-3 h-3" />
           </button>
 
-          <span className="w-px h-3.5 bg-slate-800 mx-1" />
+          <span className="w-px h-3.5 bg-slate-800 mx-0.5" />
 
           <button
             onClick={() => onDuplicateSlide(activeIndex)}
-            className="p-1 px-2 rounded bg-slate-800 hover:bg-slate-700 transition text-slate-200 flex items-center gap-1 text-[11px] font-medium"
+            className="p-1 px-1.5 rounded bg-slate-800 hover:bg-slate-700 transition text-slate-200 flex items-center gap-1 text-[10px] font-medium"
             title="Duplicar slide selecionado"
           >
             <Copy className="w-3 h-3 text-indigo-400" />
@@ -129,7 +129,7 @@ export const SlideReorderBar: React.FC<SlideReorderBarProps> = ({
       </div>
 
       {/* Trilha de Miniaturas com Botões de Inserção entre Slides */}
-      <div className="flex items-center gap-2 overflow-x-auto pb-2 pt-1 scrollbar-thin scrollbar-thumb-slate-700">
+      <div className="flex items-center gap-2 overflow-x-auto pb-1 pt-0.5 scrollbar-thin scrollbar-thumb-slate-700">
         {slides.map((slide, idx) => {
           const isActive = idx === activeIndex;
           const contentTypeObj = CONTENT_TYPES[slide.contentType || 'text_1_image'];
@@ -145,10 +145,10 @@ export const SlideReorderBar: React.FC<SlideReorderBarProps> = ({
                 <div className="flex items-center shrink-0 -mx-1 z-10">
                   <button
                     onClick={() => onInsertSlideAt(idx)}
-                    className="w-6 h-6 rounded-full bg-slate-800 border border-slate-700 text-slate-400 hover:text-white hover:bg-indigo-600 hover:border-indigo-500 transition flex items-center justify-center shadow-md group"
+                    className="w-5 h-5 rounded-full bg-slate-800 border border-slate-700 text-slate-400 hover:text-white hover:bg-indigo-600 hover:border-indigo-500 transition flex items-center justify-center shadow-md group"
                     title={`Inserir novo slide aqui (Posição #${idx + 1})`}
                   >
-                    <Plus className="w-3.5 h-3.5 group-hover:scale-110 transition-transform" />
+                    <Plus className="w-3 h-3 group-hover:scale-110 transition-transform" />
                   </button>
                 </div>
               )}
@@ -164,7 +164,7 @@ export const SlideReorderBar: React.FC<SlideReorderBarProps> = ({
                 onDragLeave={() => setDropHoverSlideId(null)}
                 onDrop={(e) => handleSlideDrop(e, idx, slide.id)}
                 onClick={() => onSelectSlide(idx)}
-                className={`flex-shrink-0 w-32 h-36 rounded-xl border-2 transition-all p-2.5 flex flex-col justify-between text-left relative group cursor-pointer select-none ${
+                className={`flex-shrink-0 w-28 h-28 rounded-xl border-2 transition-all p-2 flex flex-col justify-between text-left relative group cursor-pointer select-none ${
                   isDropHover
                     ? 'border-indigo-400 bg-indigo-950/80 scale-105 shadow-glow ring-2 ring-indigo-400'
                     : isActive
@@ -179,36 +179,36 @@ export const SlideReorderBar: React.FC<SlideReorderBarProps> = ({
                       e.stopPropagation();
                       setConfirmDeleteIdx(idx);
                     }}
-                    className="absolute -top-2 -right-2 w-6 h-6 rounded-full bg-red-600 hover:bg-red-500 text-white flex items-center justify-center shadow-lg border border-red-400 transition transform opacity-90 group-hover:opacity-100 group-hover:scale-110 z-20"
+                    className="absolute -top-1.5 -right-1.5 w-5 h-5 rounded-full bg-red-600 hover:bg-red-500 text-white flex items-center justify-center shadow-lg border border-red-400 transition transform opacity-90 group-hover:opacity-100 group-hover:scale-110 z-20"
                     title={`Excluir Slide #${idx + 1}`}
                   >
-                    <Trash2 className="w-3 h-3" />
+                    <Trash2 className="w-2.5 h-2.5" />
                   </button>
                 )}
 
                 {/* Header do Card com Número e Drag Handle */}
                 <div className="flex items-center justify-between w-full">
                   <span
-                    className={`text-[10px] font-bold px-1.5 py-0.5 rounded flex items-center gap-1 ${
+                    className={`text-[9px] font-bold px-1 py-0.5 rounded flex items-center gap-0.5 ${
                       isActive ? 'bg-indigo-600 text-white' : 'bg-slate-800 text-slate-400'
                     }`}
                   >
-                    <GripVertical className="w-2.5 h-2.5 opacity-60 group-hover:opacity-100" />
+                    <GripVertical className="w-2 h-2 opacity-60 group-hover:opacity-100" />
                     #{idx + 1}
                   </span>
 
-                  <span className="text-[9px] text-slate-400 font-medium truncate max-w-[60px]">
+                  <span className="text-[9px] text-slate-400 font-medium truncate max-w-[50px]">
                     {templateName.split(' ')[0]}
                   </span>
                 </div>
 
                 {/* Snippet do Texto */}
-                <div className="my-auto text-[10px] text-slate-300 font-medium line-clamp-3 leading-tight overflow-hidden opacity-90">
+                <div className="my-auto text-[9px] text-slate-300 font-medium line-clamp-2 leading-tight overflow-hidden opacity-90">
                   {textPreview || <span className="italic text-slate-500">Sem texto</span>}
                 </div>
 
                 {/* Rodapé do Card */}
-                <div className="flex items-center justify-between text-[9px] text-slate-400 font-mono pt-1 border-t border-slate-800/60">
+                <div className="flex items-center justify-between text-[8px] text-slate-400 font-mono pt-0.5 border-t border-slate-800/60">
                   <span>{slide.layers.images?.length ? `📷 ${slide.layers.images.length}` : '📝 Texto'}</span>
                   
                   <button
@@ -216,10 +216,10 @@ export const SlideReorderBar: React.FC<SlideReorderBarProps> = ({
                       e.stopPropagation();
                       onDuplicateSlide(idx);
                     }}
-                    className="hidden group-hover:flex items-center gap-0.5 text-[9px] text-indigo-400 hover:text-indigo-300 font-semibold"
+                    className="hidden group-hover:flex items-center gap-0.5 text-[8px] text-indigo-400 hover:text-indigo-300 font-semibold"
                     title="Duplicar este slide"
                   >
-                    <Copy className="w-2.5 h-2.5" />
+                    <Copy className="w-2 h-2" />
                     <span>Copiar</span>
                   </button>
                 </div>
@@ -233,10 +233,10 @@ export const SlideReorderBar: React.FC<SlideReorderBarProps> = ({
           <div className="flex items-center shrink-0 -mx-1 z-10">
             <button
               onClick={() => onInsertSlideAt(slides.length)}
-              className="w-6 h-6 rounded-full bg-slate-800 border border-slate-700 text-slate-400 hover:text-white hover:bg-indigo-600 hover:border-indigo-500 transition flex items-center justify-center shadow-md group"
+              className="w-5 h-5 rounded-full bg-slate-800 border border-slate-700 text-slate-400 hover:text-white hover:bg-indigo-600 hover:border-indigo-500 transition flex items-center justify-center shadow-md group"
               title="Inserir novo slide no final"
             >
-              <Plus className="w-3.5 h-3.5 group-hover:scale-110 transition-transform" />
+              <Plus className="w-3 h-3 group-hover:scale-110 transition-transform" />
             </button>
           </div>
         )}
@@ -250,17 +250,17 @@ export const SlideReorderBar: React.FC<SlideReorderBarProps> = ({
           }}
           onDragLeave={() => setDropHoverAdd(false)}
           onDrop={handleAddSlideDrop}
-          className={`flex-shrink-0 w-32 h-36 rounded-xl border-2 border-dashed transition flex flex-col items-center justify-center gap-2 ${
+          className={`flex-shrink-0 w-28 h-28 rounded-xl border-2 border-dashed transition flex flex-col items-center justify-center gap-1.5 ${
             dropHoverAdd
               ? 'border-indigo-400 bg-indigo-950/80 text-white scale-105 shadow-glow ring-2 ring-indigo-400'
               : 'border-slate-700 bg-slate-850/40 hover:bg-slate-800 hover:border-indigo-500/50 text-slate-400 hover:text-indigo-400'
           }`}
           title="Solte uma foto aqui para criar um novo slide automaticamente!"
         >
-          <div className="w-9 h-9 rounded-full bg-slate-800 flex items-center justify-center border border-slate-700">
-            {dropHoverAdd ? <Sparkles className="w-5 h-5 text-indigo-400 animate-pulse" /> : <Plus className="w-5 h-5 text-indigo-400" />}
+          <div className="w-7 h-7 rounded-full bg-slate-800 flex items-center justify-center border border-slate-700">
+            {dropHoverAdd ? <Sparkles className="w-4 h-4 text-indigo-400 animate-pulse" /> : <Plus className="w-4 h-4 text-indigo-400" />}
           </div>
-          <span className="text-xs font-semibold">{dropHoverAdd ? 'Criar com Foto' : 'Novo Slide'}</span>
+          <span className="text-[11px] font-semibold">{dropHoverAdd ? 'Criar com Foto' : 'Novo Slide'}</span>
         </button>
       </div>
 

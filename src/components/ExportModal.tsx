@@ -3,7 +3,8 @@ import { Carousel, UserProfile } from '@/types/carousel';
 import { AVAILABLE_SOCIAL_FORMATS, SocialFormatOption } from '@/types/socialFormats';
 import { exportElementToPng, downloadDataUrl, exportCarouselToZip, triggerWebhookIntegration, publishToBufferApi } from '@/lib/exporter';
 import { loadIntegrations } from '@/lib/storage';
-import { X, Download, Archive, Send, Loader2, CheckCircle2, Share2, Layers } from 'lucide-react';
+import { ChannelPublishResult } from '@/lib/publishers/PublishingAdapter';
+import { X, Download, Archive, Send, Loader2, CheckCircle2, Share2, Layers, AlertTriangle } from 'lucide-react';
 
 interface ExportModalProps {
   isOpen: boolean;
@@ -32,6 +33,7 @@ export const ExportModal: React.FC<ExportModalProps> = ({
   const [isSendingWebhook, setIsSendingWebhook] = useState(false);
   const [isPublishingBuffer, setIsPublishingBuffer] = useState(false);
   const [statusMessage, setStatusMessage] = useState<string | null>(null);
+  const [channelResults, setChannelResults] = useState<ChannelPublishResult[]>([]);
 
   useEffect(() => {
     if (isOpen) {
@@ -40,12 +42,15 @@ export const ExportModal: React.FC<ExportModalProps> = ({
       } else {
         setSelectedFormatId('instagram_carousel');
       }
+      setStatusMessage(null);
+      setChannelResults([]);
     }
   }, [isOpen, carousel?.slides?.length]);
 
   if (!isOpen) return null;
 
   const currentFormat = AVAILABLE_SOCIAL_FORMATS.find((f) => f.id === selectedFormatId) || AVAILABLE_SOCIAL_FORMATS[0];
+  const activeChannels = carousel.selectedChannels || ['instagram', 'linkedin'];
 
   // Baixar Slide Atual
   const handleExportSingle = async () => {
@@ -90,12 +95,13 @@ export const ExportModal: React.FC<ExportModalProps> = ({
     }
   };
 
-  // Publicar via API Oficial do Buffer com o formato selecionado
+  // Publicar Simultaneamente via API Oficial do Buffer para Todas as Redes Selecionadas
   const handlePublishBuffer = async () => {
     if (!activeSlideElement) return;
+    setChannelResults([]);
     try {
       setIsPublishingBuffer(true);
-      setStatusMessage(`Renderizando slides para formato ${currentFormat.name}...`);
+      setStatusMessage(`Renderizando ${allSlideElements.length || 1} slide(s)...`);
       const config = await loadIntegrations();
 
       if (!config.bufferApiKey) {
@@ -104,46 +110,31 @@ export const ExportModal: React.FC<ExportModalProps> = ({
         return;
       }
 
-      if (!config.bufferProfileId) {
-        setStatusMessage('Por favor, insira ou selecione o ID do perfil/canal no modal de integrações do Buffer.');
-        setIsPublishingBuffer(false);
-        return;
-      }
-
       const mediaUrls: string[] = [];
+      const slidesToProcess = allSlideElements.length > 0 ? allSlideElements : (activeSlideElement ? [activeSlideElement] : []);
 
-      // Se for formato Carrossel (instagram_carousel ou postType carousel), renderiza TODOS os slides
-      if (currentFormat.id === 'instagram_carousel' || currentFormat.postType === 'carousel') {
-        const slidesToProcess = allSlideElements.length > 0 ? allSlideElements : (activeSlideElement ? [activeSlideElement] : []);
-        setStatusMessage(`Renderizando ${slidesToProcess.length} slides do carrossel...`);
-
-        for (let i = 0; i < slidesToProcess.length; i++) {
-          const el = slidesToProcess[i];
-          if (el) {
-            const url = await exportElementToPng(el, `slide_${i + 1}.png`);
-            if (url && url.length > 100) {
-              mediaUrls.push(url);
-            }
-          }
-        }
-      } else {
-        // Post único, Story ou Reels: renderiza o slide ativo ou primeiro slide disponível
-        const targetEl = activeSlideElement || allSlideElements[0];
-        if (targetEl) {
-          const url = await exportElementToPng(targetEl, 'slide.png');
+      for (let i = 0; i < slidesToProcess.length; i++) {
+        const el = slidesToProcess[i];
+        if (el) {
+          const url = await exportElementToPng(el, `slide_${i + 1}.png`);
           if (url && url.length > 100) {
             mediaUrls.push(url);
           }
         }
       }
 
-      setStatusMessage(`Publicando via API do Buffer (${currentFormat.name})...`);
+      setStatusMessage(`Enviando simultaneamente para ${activeChannels.length} rede(s) no Buffer (${activeChannels.map(c => c.toUpperCase()).join(', ')})...`);
+      
       const res = await publishToBufferApi(carousel, profile, config, mediaUrls, {
         postType: currentFormat.postType,
         network: currentFormat.network,
       });
 
       setStatusMessage(res.message);
+      if (res.channelResults) {
+        setChannelResults(res.channelResults);
+      }
+
       if (res.success) {
         onMarkAsSent?.();
       }
@@ -191,7 +182,7 @@ export const ExportModal: React.FC<ExportModalProps> = ({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/75 backdrop-blur-md p-4">
-      <div className="bg-slate-900 border border-slate-800 rounded-2xl w-full max-w-lg p-6 shadow-2xl relative">
+      <div className="bg-slate-900 border border-slate-800 rounded-2xl w-full max-w-lg p-6 shadow-2xl relative max-h-[90vh] overflow-y-auto scrollbar-thin">
         <button
           onClick={onClose}
           className="absolute top-4 right-4 text-slate-400 hover:text-white p-1"
@@ -201,14 +192,14 @@ export const ExportModal: React.FC<ExportModalProps> = ({
 
         <h2 className="text-xl font-bold text-white mb-1">Exportar / Publicar Conteúdo</h2>
         <p className="text-xs text-slate-400 mb-4">
-          Escolha o formato da publicação social e exporte ou publique no Buffer.
+          Exporte seu pacote de slides ou publique simultaneamente nas redes sociais ativas.
         </p>
 
         {/* Seletor Dinâmico de Formatos Redes Sociais / Instagram */}
-        <div className="mb-5 bg-slate-950/80 p-3.5 rounded-xl border border-slate-800">
+        <div className="mb-4 bg-slate-950/80 p-3.5 rounded-xl border border-slate-800">
           <label className="text-xs font-semibold text-slate-300 flex items-center gap-1.5 mb-2">
             <Layers className="w-3.5 h-3.5 text-indigo-400" />
-            <span>Formato do Conteúdo (Publicação)</span>
+            <span>Formato do Conteúdo</span>
           </label>
 
           <select
@@ -222,20 +213,43 @@ export const ExportModal: React.FC<ExportModalProps> = ({
               </option>
             ))}
           </select>
-          <p className="text-[11px] text-slate-400 mt-1.5">
-            {currentFormat.description}
-          </p>
         </div>
 
+        {/* MENSAGEM DE STATUS DA PUBLICAÇÃO */}
         {statusMessage && (
-          <div className="mb-5 p-3 bg-indigo-950/70 border border-indigo-500/30 rounded-xl text-indigo-200 text-xs font-medium flex items-center gap-2">
-            <CheckCircle2 className="w-4 h-4 text-indigo-400 shrink-0" />
-            <span>{statusMessage}</span>
+          <div className="mb-4 p-3 bg-indigo-950/70 border border-indigo-500/30 rounded-xl text-indigo-200 text-xs font-medium flex flex-col gap-2">
+            <div className="flex items-center gap-2">
+              <CheckCircle2 className="w-4 h-4 text-indigo-400 shrink-0" />
+              <span>{statusMessage}</span>
+            </div>
+
+            {/* RELATÓRIO INDIVIDUAL POR REDE SOCIAL */}
+            {channelResults.length > 0 && (
+              <div className="flex flex-col gap-1.5 pt-2 border-t border-indigo-500/20">
+                {channelResults.map((r, idx) => (
+                  <div
+                    key={idx}
+                    className={`p-2 rounded-lg text-xs font-semibold flex items-center justify-between ${
+                      r.success
+                        ? 'bg-emerald-950/60 border border-emerald-500/40 text-emerald-300'
+                        : 'bg-red-950/60 border border-red-500/40 text-red-300'
+                    }`}
+                  >
+                    <div className="flex items-center gap-1.5">
+                      <span>{r.success ? '✅' : '⚠️'}</span>
+                      <span className="uppercase tracking-wider text-[11px] font-bold">{r.channel}</span>
+                      {r.channelName && <span className="text-[10px] text-slate-400">({r.channelName})</span>}
+                    </div>
+                    <span className="text-[10px] truncate max-w-[200px]">{r.message}</span>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
         )}
 
         <div className="flex flex-col gap-3">
-          {/* Opção 1: Publicar Direto no Buffer (API Oficial) */}
+          {/* Opção 1: Publicar Direto no Buffer em TODAS as Redes Ativas de uma vez */}
           <button
             onClick={handlePublishBuffer}
             disabled={isExportingZip || isExportingSingle || isSendingWebhook || isPublishingBuffer}
@@ -245,10 +259,10 @@ export const ExportModal: React.FC<ExportModalProps> = ({
               <Share2 className="w-6 h-6 shrink-0 text-white" />
               <div>
                 <div className="font-bold flex items-center gap-1.5">
-                  Publicar no Buffer ({currentFormat.name})
+                  🚀 Publicar no Buffer em Todas as Redes Selecionadas
                 </div>
                 <div className="text-xs text-indigo-100 font-normal">
-                  Publica no Buffer informando o tipo <strong className="font-semibold text-white">{currentFormat.postType}</strong>.
+                  Envia simultaneamente para: <strong className="font-bold text-white uppercase">{activeChannels.join(', ')}</strong>
                 </div>
               </div>
             </div>
@@ -304,7 +318,7 @@ export const ExportModal: React.FC<ExportModalProps> = ({
           </button>
         </div>
 
-        <div className="mt-6 pt-4 border-t border-slate-800 text-center">
+        <div className="mt-5 pt-4 border-t border-slate-800 text-center">
           <button
             onClick={onClose}
             className="text-xs font-semibold text-slate-400 hover:text-white"
@@ -316,4 +330,3 @@ export const ExportModal: React.FC<ExportModalProps> = ({
     </div>
   );
 };
-

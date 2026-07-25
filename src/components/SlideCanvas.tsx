@@ -12,14 +12,18 @@ interface SlideCanvasProps {
 
 export const SlideCanvas = forwardRef<HTMLDivElement, SlideCanvasProps>(
   ({ slide, profile, aspectRatio = '4:5', onImageTransform, onAssignMedia }, ref) => {
-    const heightClass = aspectRatio === '1:1' ? 'aspect-square' : 'aspect-[4/5]';
+    const isSquare = aspectRatio === '1:1';
+    const dimensionClasses = isSquare
+      ? 'w-[460px] h-[460px] aspect-square'
+      : 'w-[460px] h-[575px] aspect-[4/5]';
 
     return (
-      <div className="w-full flex items-center justify-center p-4">
+      <div className="w-full flex items-center justify-center p-0">
         <div
           ref={ref}
           id={`slide_canvas_${slide.id}`}
-          className={`w-full max-w-[460px] ${heightClass} bg-white rounded-2xl shadow-2xl overflow-hidden border border-slate-700/50 relative shrink-0 transition-all duration-300`}
+          className={`${dimensionClasses} bg-white rounded-2xl shadow-2xl overflow-hidden border border-slate-700/50 relative shrink-0 flex flex-col transition-all duration-300`}
+          style={{ width: '460px', height: isSquare ? '460px' : '575px' }}
         >
           <DynamicSlideRenderer
             slide={slide}
