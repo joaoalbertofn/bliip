@@ -1,4 +1,5 @@
 import { Slide, ContentType, LayoutStyle } from '@/types/carousel';
+import { DEFAULT_STUDENT_FRAMEWORKS } from '@/config/defaultContent';
 
 export interface ContentTypeDefinition {
   id: ContentType;
@@ -68,35 +69,41 @@ export const TEMPLATES: Record<string, { id: string; name: string; maxImages: nu
 export function createSlide(contentType: ContentType = 'text_1_image', layoutStyle: LayoutStyle = 'twitter'): Slide {
   const slideId = `slide_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`;
 
-  if (contentType === 'text_only') {
+  // 1. FORMATO NOTÍCIA (Estudo do Google - manchete + foto de relatório/mercado)
+  if (layoutStyle === 'news_article') {
     return {
       id: slideId,
-      contentType: 'text_only',
-      layoutStyle,
-      background: layoutStyle === 'immersive' ? '#0f172a' : '#ffffff',
+      contentType: 'text_1_image',
+      layoutStyle: 'news_article',
+      background: '#ffffff',
       layers: {
         text: [
           {
             id: `text_1`,
             role: 'body',
-            content: `Você: Como posso criar conteúdo visual marcante no Instagram de forma rápida?\n\nBliip: Basta inserir seu texto e fotos. O layout, tipografia e sua marca pessoal são aplicados automaticamente!`,
+            content: DEFAULT_STUDENT_FRAMEWORKS.googleNewsStudy.bodyText,
           },
-          {
-            id: `text_sig`,
-            role: 'signature',
-            content: `Bruno Perini`,
-          }
         ],
-        images: []
-      }
+        images: [
+          {
+            id: `img_1`,
+            position: 'center',
+            source: {
+              type: 'upload',
+              url: DEFAULT_STUDENT_FRAMEWORKS.googleNewsStudy.imageUrl,
+            },
+          },
+        ],
+      },
     };
   }
 
-  if (contentType === 'text_2_images') {
+  // 2. FORMATO COMPARATIVO (Profissional Visível vs Invisível - 2 fotos)
+  if (layoutStyle === 'comparison' || contentType === 'text_2_images') {
     return {
       id: slideId,
       contentType: 'text_2_images',
-      layoutStyle,
+      layoutStyle: layoutStyle === 'comparison' ? 'comparison' : layoutStyle,
       imageLayout: 'vertical',
       background: '#ffffff',
       layers: {
@@ -104,8 +111,8 @@ export function createSlide(contentType: ContentType = 'text_1_image', layoutSty
           {
             id: `text_1`,
             role: 'body',
-            content: `Enquanto um país estimula o empreendedorismo, o outro cria barreiras.\n\n<mark class="bg-yellow-300 px-1 rounded">Brasil piora e é o 3º país mais complexo para negócios</mark>, aponta ranking global.`,
-          }
+            content: DEFAULT_STUDENT_FRAMEWORKS.visibilityComparison.bodyText,
+          },
         ],
         images: [
           {
@@ -113,35 +120,80 @@ export function createSlide(contentType: ContentType = 'text_1_image', layoutSty
             position: 'top',
             source: {
               type: 'upload',
-              url: 'https://images.unsplash.com/photo-1551836022-d5d88e9218df?auto=format&fit=crop&w=800&q=80'
-            }
+              url: DEFAULT_STUDENT_FRAMEWORKS.visibilityComparison.imageUrl1!,
+            },
           },
           {
             id: `img_2`,
             position: 'bottom',
             source: {
               type: 'upload',
-              url: 'https://images.unsplash.com/photo-1460925895917-afdab827c52f?auto=format&fit=crop&w=800&q=80'
-            }
-          }
-        ]
-      }
+              url: DEFAULT_STUDENT_FRAMEWORKS.visibilityComparison.imageUrl2!,
+            },
+          },
+        ],
+      },
     };
   }
 
-  // Padrão: text_1_image
+  // 3. FORMATO IMERSIVO (Citação em tela cheia)
+  if (layoutStyle === 'immersive') {
+    return {
+      id: slideId,
+      contentType: 'text_only',
+      layoutStyle: 'immersive',
+      background: '#0f172a',
+      layers: {
+        text: [
+          {
+            id: `text_1`,
+            role: 'quote',
+            content: DEFAULT_STUDENT_FRAMEWORKS.immersiveQuotes[0].quote,
+          },
+          {
+            id: `text_sig`,
+            role: 'signature',
+            content: DEFAULT_STUDENT_FRAMEWORKS.immersiveQuotes[0].signature || '',
+          },
+        ],
+        images: [],
+      },
+    };
+  }
+
+  // 4. FORMATO TWITTER / POST DE REFLEXÃO (Padrão)
+  if (contentType === 'text_only') {
+    return {
+      id: slideId,
+      contentType: 'text_only',
+      layoutStyle: 'twitter',
+      background: '#ffffff',
+      layers: {
+        text: [
+          {
+            id: `text_1`,
+            role: 'body',
+            content: DEFAULT_STUDENT_FRAMEWORKS.twitterPerfectionism.bodyText,
+          },
+        ],
+        images: [],
+      },
+    };
+  }
+
+  // Default: Twitter (Text + 1 Image)
   return {
     id: slideId,
     contentType: 'text_1_image',
-    layoutStyle,
+    layoutStyle: 'twitter',
     background: '#ffffff',
     layers: {
       text: [
         {
           id: `text_1`,
           role: 'body',
-          content: `Um garoto de 13 anos abriu uma <mark class="bg-yellow-300 px-1 rounded">barraca de cachorro-quente</mark> em frente à sua casa em Minnesota.\n\nEle só queria ganhar um dinheiro nas férias de verão.`,
-        }
+          content: DEFAULT_STUDENT_FRAMEWORKS.twitterPerfectionism.bodyText,
+        },
       ],
       images: [
         {
@@ -149,11 +201,11 @@ export function createSlide(contentType: ContentType = 'text_1_image', layoutSty
           position: 'center',
           source: {
             type: 'upload',
-            url: 'https://images.unsplash.com/photo-1517245386807-bb43f82c33c4?auto=format&fit=crop&w=1000&q=80'
-          }
-        }
-      ]
-    }
+            url: DEFAULT_STUDENT_FRAMEWORKS.twitterPerfectionism.imageUrl,
+          },
+        },
+      ],
+    },
   };
 }
 

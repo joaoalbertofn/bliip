@@ -72,7 +72,7 @@ export default function BliipApp() {
   const [isIntegrationsModalOpen, setIsIntegrationsModalOpen] = useState(false);
   const [isExportModalOpen, setIsExportModalOpen] = useState(false);
   const [isNewCarouselModalOpen, setIsNewCarouselModalOpen] = useState(false);
-  const [newCarouselSlideCount, setNewCarouselSlideCount] = useState(4);
+  const [newCarouselSlideCount, setNewCarouselSlideCount] = useState(3);
 
   const [integrations, setIntegrations] = useState<{ bufferApiKey?: string }>({ bufferApiKey: '' });
   const [connectedChannels, setConnectedChannels] = useState<SocialChannel[]>(['instagram', 'linkedin']);

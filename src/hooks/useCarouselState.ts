@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { Carousel, Slide, UserProfile, ImageSource, ContentType, LayoutStyle, SocialChannel } from '@/types/carousel';
 import { loadCarousels, saveCarousels, loadUserPreferences, saveUserPreferences, DEFAULT_USER_PREFERENCES } from '@/lib/storage';
 import { createSlide } from '@/lib/templates';
+import { DEFAULT_STUDENT_FRAMEWORKS } from '@/config/defaultContent';
 import { SlideTheme, SLIDE_THEMES } from '@/lib/themes';
 import { validateFontSize, canDeleteSlide, canAddSlide } from '@/domain';
 
@@ -11,7 +12,7 @@ export function useCarouselState(profile: UserProfile) {
   const [activeSlideIndex, setActiveSlideIndex] = useState<number>(0);
   const [isSaving, setIsSaving] = useState(false);
 
-  // 1. Carregar dados iniciais ou criar carrossel de demonstração (8 permutações)
+  // 1. Carregar dados iniciais ou criar carrossel de demonstração (Frameworks de Conteúdo para Alunos)
   useEffect(() => {
     async function initData() {
       const savedCarousels = await loadCarousels();
@@ -19,51 +20,40 @@ export function useCarouselState(profile: UserProfile) {
         setCarousels(savedCarousels);
         setActiveCarouselId(savedCarousels[0].id);
       } else {
-        // Criar Carrossel Inicial de Demonstração com TODAS as 8 permutações de layouts
-        const s1 = createSlide('text_1_image', 'twitter');
-        s1.layers.text = [{ id: 't1', role: 'body', content: 'Um garoto de 13 anos abriu uma <mark class="bg-yellow-300 px-1 rounded">barraca de cachorro-quente</mark> em frente à sua casa em Minnesota.' }];
+        // Criar Carrossel Inicial Didático com Suíte Completa de Formatos (8 Slides)
+        const s1 = createSlide('text_1_image', 'news_article');
+        const s2 = createSlide('text_2_images', 'comparison');
+        const s3 = createSlide('text_only', 'immersive');
+        const s4 = createSlide('text_1_image', 'twitter');
 
-        const s2 = createSlide('text_only', 'twitter');
-        s2.layers.text = [{ id: 't2', role: 'body', content: 'Você: Como criar um carrossel de alto impacto em minutos?\n\nBliip: Basta definir seu texto e imagem. O layout e sua marca pessoal são aplicados automaticamente!' }];
-
-        const s3 = createSlide('text_2_images', 'twitter');
-        s3.imageLayout = 'vertical';
-        s3.layers.text = [{ id: 't3', role: 'body', content: '<mark class="bg-yellow-300 px-1 rounded">Brasil piora e é o 3º país mais complexo para negócios</mark>, aponta ranking global.' }];
-
-        const s4 = createSlide('text_2_images', 'twitter');
-        s4.imageLayout = 'horizontal';
-        s4.layers.text = [{ id: 't4', role: 'body', content: 'Comparativo lado a lado de dados e relatórios de mercado.' }];
-
-        const s5 = createSlide('text_1_image', 'immersive');
+        const s5 = createSlide('text_only', 'immersive');
         s5.layers.text = [
-          { id: 't5_q', role: 'quote', content: 'Quando duas pessoas se unem, deve ser para compartilhar alegria, não para extrair alegria uma da outra.' },
-          { id: 't5_s', role: 'signature', content: profile.name }
+          { id: 't5_q', role: 'quote', content: DEFAULT_STUDENT_FRAMEWORKS.immersiveQuotes[0].quote },
+          { id: 't5_s', role: 'signature', content: DEFAULT_STUDENT_FRAMEWORKS.immersiveQuotes[0].signature || profile.name }
         ];
 
         const s6 = createSlide('text_only', 'immersive');
         s6.background = '#0f172a';
         s6.layers.text = [
-          { id: 't6_q', role: 'quote', content: 'A clareza de propósito traz uma paz inabalável diante das tempestades.' },
-          { id: 't6_s', role: 'signature', content: profile.name }
+          { id: 't6_q', role: 'quote', content: DEFAULT_STUDENT_FRAMEWORKS.immersiveQuotes[1].quote },
+          { id: 't6_s', role: 'signature', content: DEFAULT_STUDENT_FRAMEWORKS.immersiveQuotes[1].signature || profile.name }
         ];
 
-        const s7 = createSlide('text_2_images', 'immersive');
-        s7.imageLayout = 'vertical';
+        const s7 = createSlide('text_only', 'immersive');
         s7.layers.text = [
-          { id: 't7_q', role: 'quote', content: 'Dois momentos marcantes em um único slide imersivo.' },
-          { id: 't7_s', role: 'signature', content: profile.name }
+          { id: 't7_q', role: 'quote', content: DEFAULT_STUDENT_FRAMEWORKS.immersiveQuotes[2].quote },
+          { id: 't7_s', role: 'signature', content: DEFAULT_STUDENT_FRAMEWORKS.immersiveQuotes[2].signature || profile.name }
         ];
 
-        const s8 = createSlide('text_2_images', 'immersive');
-        s8.imageLayout = 'horizontal';
+        const s8 = createSlide('text_only', 'immersive');
         s8.layers.text = [
-          { id: 't8_q', role: 'quote', content: 'Visão dupla em colunas no formato inspiracional Sadhguru.' },
-          { id: 't8_s', role: 'signature', content: profile.name }
+          { id: 't8_q', role: 'quote', content: DEFAULT_STUDENT_FRAMEWORKS.immersiveQuotes[3].quote },
+          { id: 't8_s', role: 'signature', content: DEFAULT_STUDENT_FRAMEWORKS.immersiveQuotes[3].signature || profile.name }
         ];
 
         const demoCarousel: Carousel = {
           id: `carousel_${Date.now()}`,
-          name: 'Suíte Completa de Permutações (8 Layouts)',
+          name: 'Frameworks de Autoridade e Vendas (Exemplo para Alunos)',
           createdAt: new Date().toISOString(),
           updatedAt: new Date().toISOString(),
           status: 'draft',
@@ -104,12 +94,21 @@ export function useCarouselState(profile: UserProfile) {
     saveCurrentCarouselsState(updated);
   };
 
-  const handleCreateNewCarousel = async (newCarouselSlideCount: number = 4) => {
+  const handleCreateNewCarousel = async (newCarouselSlideCount: number = 3) => {
     const prefs = await loadUserPreferences();
     const newSlides: Slide[] = [];
 
+    // Sequência didática de formatos para o aluno aprender os diferentes estilos
+    const slidePresets: Array<{ contentType: ContentType; layoutStyle: LayoutStyle }> = [
+      { contentType: 'text_1_image', layoutStyle: 'news_article' }, // Slide 1: Notícia / Estudo do Google
+      { contentType: 'text_2_images', layoutStyle: 'comparison' },   // Slide 2: Comparativo Visível vs Invisível
+      { contentType: 'text_only', layoutStyle: 'immersive' },         // Slide 3: Frase Imersiva / Citação
+      { contentType: 'text_1_image', layoutStyle: 'twitter' },         // Slide 4+: Twitter Post de Reflexão
+    ];
+
     for (let i = 0; i < newCarouselSlideCount; i++) {
-      const slide = createSlide(prefs.contentType || 'text_1_image', prefs.layoutStyle || 'twitter');
+      const preset = slidePresets[i] || slidePresets[3];
+      const slide = createSlide(preset.contentType, preset.layoutStyle);
       if (prefs.theme) {
         slide.theme = prefs.theme;
       }
