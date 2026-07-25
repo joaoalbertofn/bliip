@@ -102,11 +102,11 @@ export const Dashboard: React.FC<DashboardProps> = ({
                 title="Sua conta Google conectada"
               >
                 <img
-                  src={session.user?.image || profile.avatarUrl || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100'}
-                  alt={session.user?.name || profile.name}
+                  src={profile.avatarUrl || session.user?.image || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100'}
+                  alt={profile.name || session.user?.name || 'Perfil'}
                   className="w-7 h-7 rounded-full object-cover border border-indigo-400"
                 />
-                <span className="hidden sm:inline max-w-[100px] truncate">{session.user?.name || profile.name}</span>
+                <span className="hidden sm:inline max-w-[100px] truncate">{profile.name || session.user?.name}</span>
               </button>
               <button
                 onClick={() => signOut()}
