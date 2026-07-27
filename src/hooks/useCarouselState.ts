@@ -332,7 +332,11 @@ export function useCarouselState(profile: UserProfile) {
 
   const handleAddSlide = () => {
     if (!activeCarousel || !canAddSlide(activeCarousel.slides.length)) return;
-    const newSlide = createSlide('text_1_image', 'twitter');
+    const refSlide = activeSlide || activeCarousel.slides[activeCarousel.slides.length - 1];
+    const targetContentType = refSlide?.contentType || 'text_1_image';
+    const targetLayoutStyle = refSlide?.layoutStyle || 'twitter';
+
+    const newSlide = createSlide(targetContentType, targetLayoutStyle, refSlide);
     const updatedSlides = [...activeCarousel.slides, newSlide];
     const updatedCarousels = carousels.map((c) =>
       c.id === activeCarousel.id ? { ...c, slides: updatedSlides } : c
@@ -343,7 +347,12 @@ export function useCarouselState(profile: UserProfile) {
 
   const handleInsertSlideAt = (insertIndex: number) => {
     if (!activeCarousel || !canAddSlide(activeCarousel.slides.length)) return;
-    const newSlide = createSlide('text_1_image', 'twitter');
+    const previousSlide = insertIndex > 0 ? activeCarousel.slides[insertIndex - 1] : activeCarousel.slides[0];
+    const refSlide = previousSlide || activeSlide;
+    const targetContentType = refSlide?.contentType || 'text_1_image';
+    const targetLayoutStyle = refSlide?.layoutStyle || 'twitter';
+
+    const newSlide = createSlide(targetContentType, targetLayoutStyle, refSlide);
     const updatedSlides = [...activeCarousel.slides];
     updatedSlides.splice(insertIndex, 0, newSlide);
 

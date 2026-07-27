@@ -66,16 +66,27 @@ export const TEMPLATES: Record<string, { id: string; name: string; maxImages: nu
   template_d: { id: 'template_d', name: 'Citação / Imersivo', maxImages: 1 },
 };
 
-export function createSlide(contentType: ContentType = 'text_1_image', layoutStyle: LayoutStyle = 'twitter'): Slide {
+export function createSlide(
+  contentType: ContentType = 'text_1_image',
+  layoutStyle: LayoutStyle = 'twitter',
+  referenceSlide?: Partial<Slide>
+): Slide {
   const slideId = `slide_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`;
+  const inheritedTheme = referenceSlide?.theme;
+  const inheritedBackground = referenceSlide?.background;
+  const inheritedFontSize = referenceSlide?.fontSize;
+  const inheritedImageLayout = referenceSlide?.imageLayout;
 
   // 1. FORMATO NOTÍCIA (Estudo do Google - manchete + foto de relatório/mercado)
   if (layoutStyle === 'news_article') {
+    const isTextOnly = contentType === 'text_only';
     return {
       id: slideId,
-      contentType: 'text_1_image',
+      contentType: isTextOnly ? 'text_only' : 'text_1_image',
       layoutStyle: 'news_article',
-      background: '#ffffff',
+      background: inheritedBackground || '#ffffff',
+      theme: inheritedTheme,
+      fontSize: inheritedFontSize,
       layers: {
         text: [
           {
@@ -84,28 +95,32 @@ export function createSlide(contentType: ContentType = 'text_1_image', layoutSty
             content: DEFAULT_STUDENT_FRAMEWORKS.googleNewsStudy.bodyText,
           },
         ],
-        images: [
-          {
-            id: `img_1`,
-            position: 'center',
-            source: {
-              type: 'upload',
-              url: DEFAULT_STUDENT_FRAMEWORKS.googleNewsStudy.imageUrl,
-            },
-          },
-        ],
+        images: isTextOnly
+          ? []
+          : [
+              {
+                id: `img_1`,
+                position: 'center',
+                source: {
+                  type: 'upload',
+                  url: DEFAULT_STUDENT_FRAMEWORKS.googleNewsStudy.imageUrl,
+                },
+              },
+            ],
       },
     };
   }
 
   // 2. FORMATO COMPARATIVO (Profissional Visível vs Invisível - 2 fotos)
-  if (layoutStyle === 'comparison' || contentType === 'text_2_images') {
+  if (layoutStyle === 'comparison') {
     return {
       id: slideId,
       contentType: 'text_2_images',
-      layoutStyle: layoutStyle === 'comparison' ? 'comparison' : layoutStyle,
-      imageLayout: 'vertical',
-      background: '#ffffff',
+      layoutStyle: 'comparison',
+      imageLayout: inheritedImageLayout || 'vertical',
+      background: inheritedBackground || '#ffffff',
+      theme: inheritedTheme,
+      fontSize: inheritedFontSize,
       layers: {
         text: [
           {
@@ -138,11 +153,14 @@ export function createSlide(contentType: ContentType = 'text_1_image', layoutSty
 
   // 3. FORMATO IMERSIVO (Citação em tela cheia)
   if (layoutStyle === 'immersive') {
+    const isWithImage = contentType === 'text_1_image';
     return {
       id: slideId,
-      contentType: 'text_only',
+      contentType: isWithImage ? 'text_1_image' : 'text_only',
       layoutStyle: 'immersive',
-      background: '#0f172a',
+      background: inheritedBackground || '#0f172a',
+      theme: inheritedTheme,
+      fontSize: inheritedFontSize,
       layers: {
         text: [
           {
@@ -156,18 +174,31 @@ export function createSlide(contentType: ContentType = 'text_1_image', layoutSty
             content: DEFAULT_STUDENT_FRAMEWORKS.immersiveQuotes[0].signature || '',
           },
         ],
-        images: [],
+        images: isWithImage
+          ? [
+              {
+                id: `img_1`,
+                position: 'center',
+                source: {
+                  type: 'upload',
+                  url: DEFAULT_STUDENT_FRAMEWORKS.twitterPerfectionism.imageUrl,
+                },
+              },
+            ]
+          : [],
       },
     };
   }
 
-  // 4. FORMATO TWITTER / POST DE REFLEXÃO (Padrão)
+  // 4. FORMATO TWITTER OU OUTROS
   if (contentType === 'text_only') {
     return {
       id: slideId,
       contentType: 'text_only',
-      layoutStyle: 'twitter',
-      background: '#ffffff',
+      layoutStyle: layoutStyle || 'twitter',
+      background: inheritedBackground || '#ffffff',
+      theme: inheritedTheme,
+      fontSize: inheritedFontSize,
       layers: {
         text: [
           {
@@ -181,12 +212,53 @@ export function createSlide(contentType: ContentType = 'text_1_image', layoutSty
     };
   }
 
+  if (contentType === 'text_2_images') {
+    return {
+      id: slideId,
+      contentType: 'text_2_images',
+      layoutStyle: layoutStyle || 'twitter',
+      imageLayout: inheritedImageLayout || 'horizontal',
+      background: inheritedBackground || '#ffffff',
+      theme: inheritedTheme,
+      fontSize: inheritedFontSize,
+      layers: {
+        text: [
+          {
+            id: `text_1`,
+            role: 'body',
+            content: DEFAULT_STUDENT_FRAMEWORKS.visibilityComparison.bodyText,
+          },
+        ],
+        images: [
+          {
+            id: `img_1`,
+            position: 'top',
+            source: {
+              type: 'upload',
+              url: DEFAULT_STUDENT_FRAMEWORKS.visibilityComparison.imageUrl1!,
+            },
+          },
+          {
+            id: `img_2`,
+            position: 'bottom',
+            source: {
+              type: 'upload',
+              url: DEFAULT_STUDENT_FRAMEWORKS.visibilityComparison.imageUrl2!,
+            },
+          },
+        ],
+      },
+    };
+  }
+
   // Default: Twitter (Text + 1 Image)
   return {
     id: slideId,
     contentType: 'text_1_image',
-    layoutStyle: 'twitter',
-    background: '#ffffff',
+    layoutStyle: layoutStyle || 'twitter',
+    background: inheritedBackground || '#ffffff',
+    theme: inheritedTheme,
+    fontSize: inheritedFontSize,
     layers: {
       text: [
         {
