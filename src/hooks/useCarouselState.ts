@@ -531,6 +531,13 @@ export function useCarouselState(profile: UserProfile) {
     saveCurrentCarouselsState(updatedCarousels);
   };
 
+  const handleScheduleCarousel = (carouselId: string, scheduledAt: string) => {
+    const updatedCarousels = carousels.map((c) =>
+      c.id === carouselId ? { ...c, status: 'scheduled' as const, scheduledAt, updatedAt: new Date().toISOString() } : c
+    );
+    saveCurrentCarouselsState(updatedCarousels);
+  };
+
   return {
     carousels,
     setCarousels,
@@ -570,5 +577,6 @@ export function useCarouselState(profile: UserProfile) {
     handleCreateSlideFromMedia,
     handleCaptionChange,
     handleToggleChannel,
+    handleScheduleCarousel,
   };
 }

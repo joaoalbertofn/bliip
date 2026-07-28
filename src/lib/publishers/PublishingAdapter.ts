@@ -6,6 +6,7 @@ export interface StandardizedPostPayload {
   caption: string;
   mediaUrls: string[];
   targetChannels: SocialChannel[];
+  scheduledAt?: string; // Data e hora ISO para agendamento (ex: 2026-07-28T10:00:00.000Z)
 }
 
 export interface ChannelPublishResult {

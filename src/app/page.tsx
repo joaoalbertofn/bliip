@@ -188,6 +188,7 @@ export default function BliipApp() {
     handleCreateSlideFromMedia,
     handleCaptionChange,
     handleToggleChannel,
+    handleScheduleCarousel,
   } = useCarouselState(profile);
 
   // Refs de captura para exportação
@@ -712,10 +713,12 @@ export default function BliipApp() {
         isOpen={isExportModalOpen}
         onClose={() => setIsExportModalOpen(false)}
         carousel={activeCarousel}
+        carousels={carousels}
         profile={profile}
         activeSlideElement={activeSlideRef.current}
         allSlideElements={hiddenSlideRefs.current.filter(Boolean) as HTMLElement[]}
         onMarkAsSent={handleMarkAsSent}
+        onScheduleCarousel={handleScheduleCarousel}
       />
 
       {isNewCarouselModalOpen && (

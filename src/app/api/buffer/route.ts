@@ -178,6 +178,7 @@ export async function POST(req: NextRequest) {
       action = 'post',
       postType = 'carousel',
       network = 'instagram',
+      scheduledAt,
     } = body;
 
     const rawToken = headerToken || bodyToken;
@@ -190,6 +191,7 @@ export async function POST(req: NextRequest) {
       action,
       postType,
       network,
+      scheduledAt,
       mediaUrlsCount: mediaUrls.length,
     });
 
@@ -368,10 +370,15 @@ async function uploadMediaToPublicUrl(mediaUrl: string): Promise<string> {
     const inputPayload: Record<string, any> = {
       channelId: profileId,
       text: text || 'Novo post criado via Bliip!',
-      schedulingType: 'automatic',
-      mode: 'addToQueue',
+      schedulingType: scheduledAt ? 'custom' : 'automatic',
+      mode: scheduledAt ? 'customScheduled' : 'addToQueue',
       saveToDraft: true,
     };
+
+    if (scheduledAt) {
+      inputPayload.scheduledAt = scheduledAt;
+      inputPayload.dueAt = scheduledAt;
+    }
 
     if (assets.length > 0) {
       inputPayload.assets = assets;
@@ -441,7 +448,18 @@ async function uploadMediaToPublicUrl(mediaUrl: string): Promise<string> {
     params.append('access_token', cleanToken);
     params.append('profile_ids[]', profileId);
     params.append('text', text || 'Novo post criado via Bliip!');
-    params.append('now', 'true');
+
+    if (scheduledAt) {
+      const timestampSec = Math.floor(new Date(scheduledAt).getTime() / 1000);
+      if (!isNaN(timestampSec)) {
+        params.append('scheduled_at', timestampSec.toString());
+        params.append('as_draft', 'true');
+      } else {
+        params.append('now', 'true');
+      }
+    } else {
+      params.append('now', 'true');
+    }
 
     if (mediaUrls && Array.isArray(mediaUrls) && mediaUrls.length > 0) {
       params.append('media[picture]', mediaUrls[0]);

@@ -8,6 +8,7 @@ import {
   Folder,
   CheckCircle2,
   Clock,
+  Calendar,
   Edit3,
   Copy,
   Download,
@@ -44,7 +45,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
 }) => {
   const { data: session } = useSession();
   const [searchTerm, setSearchTerm] = useState('');
-  const [statusFilter, setStatusFilter] = useState<'all' | 'draft' | 'sent'>('all');
+  const [statusFilter, setStatusFilter] = useState<'all' | 'draft' | 'scheduled' | 'sent'>('all');
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
 
   // Filtro de Busca e Status
@@ -52,6 +53,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
     const matchesSearch = c.name.toLowerCase().includes(searchTerm.toLowerCase());
     const cStatus = c.status || 'draft';
     if (statusFilter === 'draft') return matchesSearch && cStatus === 'draft';
+    if (statusFilter === 'scheduled') return matchesSearch && cStatus === 'scheduled';
     if (statusFilter === 'sent') return matchesSearch && cStatus === 'sent';
     return matchesSearch;
   });
@@ -59,6 +61,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
   // Estatísticas
   const totalCount = carousels.length;
   const draftCount = carousels.filter((c) => (c.status || 'draft') === 'draft').length;
+  const scheduledCount = carousels.filter((c) => c.status === 'scheduled').length;
   const sentCount = carousels.filter((c) => c.status === 'sent').length;
 
   const carouselToDelete = carousels.find((c) => c.id === confirmDeleteId);
@@ -167,7 +170,8 @@ export const Dashboard: React.FC<DashboardProps> = ({
       {/* Conteúdo Principal do Dashboard */}
       <main className="flex-1 max-w-7xl w-full mx-auto p-6 flex flex-col gap-8">
         {/* Banner de Estatísticas Rápidas */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        {/* Banner de Estatísticas Rápidas */}
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
           <div className="bg-slate-900/80 border border-slate-800 p-5 rounded-2xl flex items-center justify-between shadow-card">
             <div>
               <span className="text-xs font-semibold text-slate-400">Total de Conteúdos</span>
@@ -190,6 +194,16 @@ export const Dashboard: React.FC<DashboardProps> = ({
 
           <div className="bg-slate-900/80 border border-slate-800 p-5 rounded-2xl flex items-center justify-between shadow-card">
             <div>
+              <span className="text-xs font-semibold text-slate-400">Agendados no Calendário</span>
+              <div className="text-2xl font-extrabold text-purple-400 mt-1">{scheduledCount}</div>
+            </div>
+            <div className="w-11 h-11 rounded-xl bg-purple-500/10 border border-purple-500/20 text-purple-400 flex items-center justify-center">
+              <Calendar className="w-5 h-5" />
+            </div>
+          </div>
+
+          <div className="bg-slate-900/80 border border-slate-800 p-5 rounded-2xl flex items-center justify-between shadow-card">
+            <div>
               <span className="text-xs font-semibold text-slate-400">Enviados / Exportados</span>
               <div className="text-2xl font-extrabold text-emerald-400 mt-1">{sentCount}</div>
             </div>
@@ -201,7 +215,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
 
         {/* Barra de Filtros por Aba */}
         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 border-b border-slate-800 pb-4">
-          <div className="flex items-center gap-2 bg-slate-900 p-1 rounded-xl border border-slate-800">
+          <div className="flex items-center gap-2 bg-slate-900 p-1 rounded-xl border border-slate-800 flex-wrap">
             <button
               onClick={() => setStatusFilter('all')}
               className={`px-4 py-2 text-xs font-bold rounded-lg transition ${
@@ -222,6 +236,17 @@ export const Dashboard: React.FC<DashboardProps> = ({
             >
               <span className="w-2 h-2 rounded-full bg-amber-400" />
               <span>Rascunhos ({draftCount})</span>
+            </button>
+            <button
+              onClick={() => setStatusFilter('scheduled')}
+              className={`px-4 py-2 text-xs font-bold rounded-lg transition flex items-center gap-1.5 ${
+                statusFilter === 'scheduled'
+                  ? 'bg-purple-600 text-white shadow-sm'
+                  : 'text-slate-400 hover:text-slate-200'
+              }`}
+            >
+              <span className="w-2 h-2 rounded-full bg-purple-400" />
+              <span>Agendados ({scheduledCount})</span>
             </button>
             <button
               onClick={() => setStatusFilter('sent')}
@@ -263,7 +288,12 @@ export const Dashboard: React.FC<DashboardProps> = ({
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {filteredCarousels.map((carousel) => {
               const isSent = carousel.status === 'sent';
+              const isScheduled = carousel.status === 'scheduled';
               const firstSlide = carousel.slides[0];
+
+              const formattedScheduledDate = carousel.scheduledAt
+                ? `${new Date(carousel.scheduledAt).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' })} às ${new Date(carousel.scheduledAt).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}`
+                : '';
 
               return (
                 <div
@@ -290,6 +320,18 @@ export const Dashboard: React.FC<DashboardProps> = ({
                           <CheckCircle2 className="w-3 h-3 text-emerald-400" />
                           <span>Enviado / Exportado</span>
                         </span>
+                      ) : isScheduled ? (
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            onQuickExportCarousel(carousel);
+                          }}
+                          className="px-2.5 py-1 rounded-full text-[10px] font-extrabold bg-purple-500/25 text-purple-200 hover:bg-purple-500/40 border border-purple-500/50 flex items-center gap-1 shadow-sm transition"
+                          title="Clique para ver o agendamento no Calendário"
+                        >
+                          <Calendar className="w-3 h-3 text-purple-300" />
+                          <span>Agendado ({formattedScheduledDate})</span>
+                        </button>
                       ) : (
                         <span className="px-2.5 py-1 rounded-full text-[10px] font-extrabold bg-amber-500/20 text-amber-300 border border-amber-500/40 flex items-center gap-1 shadow-sm">
                           <Clock className="w-3 h-3 text-amber-400" />

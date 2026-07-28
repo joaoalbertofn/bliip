@@ -48,7 +48,8 @@ export type Carousel = {
   slides: Slide[];
   createdAt: string;
   updatedAt: string;
-  status?: "draft" | "sent";
+  status?: "draft" | "scheduled" | "sent";
+  scheduledAt?: string; // Data e hora ISO de agendamento (ex: 2026-07-28T10:00:00.000Z)
   aspectRatio?: "4:5" | "1:1";
   mediaLibrary?: string[];
   caption?: string; // Legenda global do post (usada no Instagram, LinkedIn, etc)

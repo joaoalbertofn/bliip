@@ -69,7 +69,8 @@ export class BufferPublisher implements PublishingAdapter {
             mediaUrls: payload.mediaUrls,
             postType: 'carousel',
             network: channel,
-            now: true,
+            scheduledAt: payload.scheduledAt,
+            now: !payload.scheduledAt,
           }),
         });
 
