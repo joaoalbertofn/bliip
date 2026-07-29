@@ -1,6 +1,6 @@
 import React from 'react';
 import { SocialChannel } from '@/types/carousel';
-import { Instagram, Linkedin, Youtube, Video, Hash, Smile, Send, AlertCircle, Link as LinkIcon } from 'lucide-react';
+import { Instagram, Linkedin, Facebook, Hash, Smile, Send, AlertCircle, Link as LinkIcon } from 'lucide-react';
 
 interface PostCaptionEditorProps {
   caption: string;
@@ -15,7 +15,7 @@ interface PostCaptionEditorProps {
 export const PostCaptionEditor: React.FC<PostCaptionEditorProps> = ({
   caption,
   selectedChannels,
-  connectedChannels = ['instagram', 'linkedin'],
+  connectedChannels = ['instagram', 'linkedin', 'facebook'],
   isBufferConnected = true,
   onCaptionChange,
   onToggleChannel,
@@ -23,13 +23,11 @@ export const PostCaptionEditor: React.FC<PostCaptionEditorProps> = ({
 }) => {
   const isInstagramConnected = isBufferConnected && connectedChannels.includes('instagram');
   const isLinkedinConnected = isBufferConnected && connectedChannels.includes('linkedin');
-  const isYoutubeConnected = isBufferConnected && connectedChannels.includes('youtube');
-  const isTiktokConnected = isBufferConnected && connectedChannels.includes('tiktok');
+  const isFacebookConnected = isBufferConnected && connectedChannels.includes('facebook');
 
   const isInstagramSelected = selectedChannels.includes('instagram');
   const isLinkedinSelected = selectedChannels.includes('linkedin');
-  const isYoutubeSelected = selectedChannels.includes('youtube');
-  const isTiktokSelected = selectedChannels.includes('tiktok');
+  const isFacebookSelected = selectedChannels.includes('facebook');
 
   const addHashtag = (tag: string) => {
     const space = caption && !caption.endsWith(' ') && !caption.endsWith('\n') ? ' ' : '';
@@ -76,7 +74,7 @@ export const PostCaptionEditor: React.FC<PostCaptionEditorProps> = ({
           </div>
         )}
 
-        <div className="grid grid-cols-2 gap-2">
+        <div className="grid grid-cols-3 gap-2">
           {/* Checkbox Instagram */}
           <button
             type="button"
@@ -131,63 +129,36 @@ export const PostCaptionEditor: React.FC<PostCaptionEditorProps> = ({
             />
           </button>
 
-          {/* Checkbox YouTube Comunidade */}
+          {/* Checkbox Facebook */}
           <button
             type="button"
-            disabled={!isYoutubeConnected}
-            onClick={() => isYoutubeConnected && onToggleChannel('youtube')}
-            title={isYoutubeConnected ? 'YouTube conectado no Buffer' : 'Conecte o YouTube no Buffer para ativar'}
+            disabled={!isFacebookConnected}
+            onClick={() => isFacebookConnected && onToggleChannel('facebook')}
+            title={isFacebookConnected ? 'Facebook conectado no Buffer' : 'Conecte o Facebook no Buffer para ativar'}
             className={`p-2.5 rounded-xl border text-left flex items-center justify-between transition ${
-              !isYoutubeConnected
+              !isFacebookConnected
                 ? 'border-slate-800/60 bg-slate-950/40 text-slate-600 cursor-not-allowed opacity-50'
-                : isYoutubeSelected
-                ? 'border-red-500/80 bg-red-950/30 text-white ring-1 ring-red-500/40 shadow-glow'
+                : isFacebookSelected
+                ? 'border-indigo-500/80 bg-indigo-950/30 text-white ring-1 ring-indigo-500/40 shadow-glow'
                 : 'border-slate-800 bg-slate-900/60 text-slate-400 hover:bg-slate-800'
             }`}
           >
             <div className="flex items-center gap-2">
-              <Youtube className={`w-4 h-4 ${isYoutubeConnected ? (isYoutubeSelected ? 'text-red-400' : 'text-slate-400') : 'text-slate-600'}`} />
-              <span className="text-xs font-bold">YouTube</span>
+              <Facebook className={`w-4 h-4 ${isFacebookConnected ? (isFacebookSelected ? 'text-indigo-400' : 'text-slate-400') : 'text-slate-600'}`} />
+              <span className="text-xs font-bold">Facebook</span>
             </div>
             <input
               type="checkbox"
-              checked={isYoutubeSelected && isYoutubeConnected}
-              disabled={!isYoutubeConnected}
+              checked={isFacebookSelected && isFacebookConnected}
+              disabled={!isFacebookConnected}
               readOnly
-              className="w-4 h-4 accent-red-500 rounded cursor-pointer pointer-events-none"
-            />
-          </button>
-
-          {/* Checkbox TikTok */}
-          <button
-            type="button"
-            disabled={!isTiktokConnected}
-            onClick={() => isTiktokConnected && onToggleChannel('tiktok')}
-            title={isTiktokConnected ? 'TikTok conectado no Buffer' : 'Conecte o TikTok no Buffer para ativar'}
-            className={`p-2.5 rounded-xl border text-left flex items-center justify-between transition ${
-              !isTiktokConnected
-                ? 'border-slate-800/60 bg-slate-950/40 text-slate-600 cursor-not-allowed opacity-50'
-                : isTiktokSelected
-                ? 'border-emerald-500/80 bg-emerald-950/30 text-white ring-1 ring-emerald-500/40 shadow-glow'
-                : 'border-slate-800 bg-slate-900/60 text-slate-400 hover:bg-slate-800'
-            }`}
-          >
-            <div className="flex items-center gap-2">
-              <Video className={`w-4 h-4 ${isTiktokConnected ? (isTiktokSelected ? 'text-emerald-400' : 'text-slate-400') : 'text-slate-600'}`} />
-              <span className="text-xs font-bold">TikTok</span>
-            </div>
-            <input
-              type="checkbox"
-              checked={isTiktokSelected && isTiktokConnected}
-              disabled={!isTiktokConnected}
-              readOnly
-              className="w-4 h-4 accent-emerald-500 rounded cursor-pointer pointer-events-none"
+              className="w-4 h-4 accent-indigo-500 rounded cursor-pointer pointer-events-none"
             />
           </button>
         </div>
       </div>
 
-      {/* CAMPO DE EDICÃO DA LEGENDA GLOBAL DO POST */}
+      {/* CAMPO DE EDIÇÃO DA LEGENDA GLOBAL DO POST */}
       <div className="flex flex-col gap-2">
         <div className="flex items-center justify-between text-xs font-semibold text-slate-300">
           <span>Legenda Global da Publicação</span>
@@ -199,7 +170,7 @@ export const PostCaptionEditor: React.FC<PostCaptionEditorProps> = ({
         <textarea
           value={caption}
           onChange={(e) => onCaptionChange(e.target.value)}
-          placeholder="Escreva a legenda geral do post (usada no Instagram, LinkedIn, etc)... Ex: Você já se perguntou como o algoritmo decide o que vai mostrar? Arraste para o lado! #conteudo #estrategia"
+          placeholder="Escreva a legenda geral do post (usada no Instagram, LinkedIn, Facebook)... Ex: Você já se perguntou como o algoritmo decide o que vai mostrar? Arraste para o lado! #conteudo #estrategia"
           rows={5}
           className="w-full bg-slate-800/90 border border-slate-700 rounded-xl p-3 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-indigo-500 leading-relaxed resize-y scrollbar-thin"
         />

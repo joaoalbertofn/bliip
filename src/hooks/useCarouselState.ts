@@ -1,8 +1,9 @@
 import { useState, useEffect } from 'react';
-import { Carousel, Slide, UserProfile, ImageSource, ContentType, LayoutStyle, SocialChannel } from '@/types/carousel';
-import { loadCarousels, saveCarousels, loadUserPreferences, saveUserPreferences, DEFAULT_USER_PREFERENCES } from '@/lib/storage';
+import { Carousel, Slide, UserProfile, ImageSource, ContentType, LayoutStyle, SocialChannel, SavedSlideTemplate, PlannedContentIdea } from '@/types/carousel';
+import { loadCarousels, saveCarousels, loadUserPreferences, saveUserPreferences, DEFAULT_USER_PREFERENCES, loadSavedSlideTemplates, saveSavedSlideTemplates, loadPlannedContentIdeas, savePlannedContentIdeas } from '@/lib/storage';
 import { createSlide } from '@/lib/templates';
 import { DEFAULT_STUDENT_FRAMEWORKS } from '@/config/defaultContent';
+import { PRESET_MODELS } from '@/config/presetModels';
 import { SlideTheme, SLIDE_THEMES } from '@/lib/themes';
 import { validateFontSize, canDeleteSlide, canAddSlide } from '@/domain';
 
@@ -68,6 +69,62 @@ export function useCarouselState(profile: UserProfile) {
     initData();
   }, []);
 
+  const [savedSlideTemplates, setSavedSlideTemplates] = useState<SavedSlideTemplate[]>([]);
+
+  useEffect(() => {
+    async function loadTemplates() {
+      const templates = await loadSavedSlideTemplates();
+      setSavedSlideTemplates(templates);
+    }
+    loadTemplates();
+  }, []);
+
+  const handleSaveSlideAsTemplate = async (name: string, slideToSave: Slide) => {
+    const newTemplate: SavedSlideTemplate = {
+      id: `template_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`,
+      name,
+      createdAt: new Date().toISOString(),
+      slide: JSON.parse(JSON.stringify(slideToSave)),
+    };
+    const updated = [newTemplate, ...savedSlideTemplates];
+    setSavedSlideTemplates(updated);
+    await saveSavedSlideTemplates(updated);
+  };
+
+  const handleDeleteSavedTemplate = async (templateId: string) => {
+    const updated = savedSlideTemplates.filter((t) => t.id !== templateId);
+    setSavedSlideTemplates(updated);
+    await saveSavedSlideTemplates(updated);
+  };
+
+  const handleRenameSavedTemplate = async (templateId: string, newName: string) => {
+    const updated = savedSlideTemplates.map((t) =>
+      t.id === templateId ? { ...t, name: newName } : t
+    );
+    setSavedSlideTemplates(updated);
+    await saveSavedSlideTemplates(updated);
+  };
+
+  const handleInsertSlideFromTemplate = (template: SavedSlideTemplate) => {
+    if (!activeCarousel) return;
+    const newSlideId = `slide_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`;
+    const copiedSlide: Slide = {
+      ...JSON.parse(JSON.stringify(template.slide)),
+      id: newSlideId,
+    };
+
+    const targetIdx = activeSlideIndex + 1;
+    const newSlides = [...activeCarousel.slides];
+    newSlides.splice(targetIdx, 0, copiedSlide);
+
+    const updatedCarousels = carousels.map((c) =>
+      c.id === activeCarousel.id ? { ...c, slides: newSlides, updatedAt: new Date().toISOString() } : c
+    );
+
+    saveCurrentCarouselsState(updatedCarousels);
+    setActiveSlideIndex(targetIdx);
+  };
+
   // 2. Carrossel Ativo e Slide Ativo derivados
   const activeCarousel = carousels.find((c) => c.id === activeCarouselId) || carousels[0];
   const activeSlide = activeCarousel?.slides[activeSlideIndex] || activeCarousel?.slides[0];
@@ -118,6 +175,53 @@ export function useCarouselState(profile: UserProfile) {
     const newCarousel: Carousel = {
       id: `carousel_${Date.now()}`,
       name: `Carrossel #${carousels.length + 1}`,
+      slides: newSlides,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+      status: 'draft',
+      aspectRatio: prefs.aspectRatio || '4:5',
+      selectedChannels: prefs.selectedChannels || ['instagram', 'linkedin'],
+    };
+
+    const updated = [newCarousel, ...carousels];
+    saveCurrentCarouselsState(updated);
+    setActiveCarouselId(newCarousel.id);
+    setActiveSlideIndex(0);
+    return newCarousel;
+  };
+
+  const handleCreateCarouselFromPresetModel = async (modelId: string) => {
+    const preset = PRESET_MODELS.find((m) => m.id === modelId) || PRESET_MODELS[0];
+    const prefs = await loadUserPreferences();
+    const newSlides: Slide[] = [];
+
+    preset.slides.forEach((slideDef, idx) => {
+      const slideId = `slide_${Date.now()}_${idx}_${Math.random().toString(36).substring(2, 7)}`;
+      const newSlide: Slide = {
+        id: slideId,
+        contentType: 'text_only',
+        layoutStyle: 'twitter',
+        background: '#ffffff',
+        layers: {
+          text: [
+            {
+              id: `text_${slideId}_1`,
+              role: 'body',
+              content: slideDef.bodyText,
+            },
+          ],
+          images: [],
+        },
+      };
+      if (prefs.theme) {
+        newSlide.theme = prefs.theme;
+      }
+      newSlides.push(newSlide);
+    });
+
+    const newCarousel: Carousel = {
+      id: `carousel_${Date.now()}`,
+      name: `${preset.name}`,
       slides: newSlides,
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
@@ -199,11 +303,68 @@ export function useCarouselState(profile: UserProfile) {
   const handleSelectLayoutStyle = (layoutStyle: LayoutStyle) => {
     saveUserPreferences({ layoutStyle });
     updateActiveSlide((prev) => {
+      // 1. Grava o estado do estilo atual no cache antes de alternar
+      const currentSnapshot = {
+        contentType: prev.contentType,
+        imageLayout: prev.imageLayout,
+        title: prev.title,
+        fontSize: prev.fontSize,
+        textAlignment: prev.textAlignment,
+        titleAlignment: prev.titleAlignment,
+        background: prev.background,
+        layers: JSON.parse(JSON.stringify(prev.layers || { text: [], images: [] })),
+      };
+
+      const updatedCache = {
+        ...(prev.styleCache || {}),
+        [prev.layoutStyle]: currentSnapshot,
+      };
+
+      // 2. Verifica se já existe um estado salvo no cache para o NOVO estilo
+      const cachedForNewStyle = updatedCache[layoutStyle];
+
+      if (cachedForNewStyle) {
+        // Restaura exatamente como estava no estilo antigo!
+        return {
+          ...prev,
+          layoutStyle,
+          contentType: cachedForNewStyle.contentType,
+          imageLayout: cachedForNewStyle.imageLayout,
+          title: cachedForNewStyle.title,
+          fontSize: cachedForNewStyle.fontSize,
+          textAlignment: cachedForNewStyle.textAlignment,
+          titleAlignment: cachedForNewStyle.titleAlignment,
+          background: cachedForNewStyle.background || prev.background,
+          layers: cachedForNewStyle.layers,
+          styleCache: updatedCache,
+        };
+      }
+
+      // 3. Se for a 1ª vez que seleciona esse estilo (sem cache), herda e adapta
       const isComparison = layoutStyle === 'comparison';
+      let nextContentType = prev.contentType;
+      let images = [...(prev.layers?.images || [])];
+
+      if (isComparison) {
+        nextContentType = 'text_2_images';
+        while (images.length < 2) {
+          images.push({
+            id: `img_${Date.now()}_${images.length}`,
+            position: images.length === 0 ? 'top' : 'bottom',
+            source: { type: 'upload', url: '' },
+          });
+        }
+      }
+
       return {
         ...prev,
         layoutStyle,
-        contentType: isComparison ? 'text_2_images' : prev.contentType,
+        contentType: nextContentType,
+        layers: {
+          ...prev.layers,
+          images,
+        },
+        styleCache: updatedCache,
       };
     });
   };
@@ -328,6 +489,37 @@ export function useCarouselState(profile: UserProfile) {
   const handleFontSizeChange = (fontSize: number) => {
     const validSize = validateFontSize(fontSize);
     updateActiveSlide((prev) => ({ ...prev, fontSize: validSize }));
+  };
+
+  const handleUpdateImageTitle = (imageIndex: number, title: string) => {
+    updateActiveSlide((prev) => {
+      const images = [...(prev.layers?.images || [])];
+      while (images.length <= imageIndex) {
+        images.push({
+          id: `img_${images.length + 1}`,
+          position: images.length === 0 ? 'top' : 'bottom',
+          source: { type: 'upload', url: '' },
+        });
+      }
+      images[imageIndex] = { ...images[imageIndex], title };
+      return { ...prev, layers: { ...prev.layers, images } };
+    });
+  };
+
+  const handleUpdateTextAlignment = (alignment: 'left' | 'center' | 'right') => {
+    updateActiveSlide((prev) => ({ ...prev, textAlignment: alignment }));
+  };
+
+  const handleUpdateTitleAlignment = (alignment: 'left' | 'center' | 'right') => {
+    updateActiveSlide((prev) => ({ ...prev, titleAlignment: alignment }));
+  };
+
+  const handleUpdateNewsTitle = (title: string) => {
+    updateActiveSlide((prev) => ({ ...prev, title }));
+  };
+
+  const handleUpdateImageLayout = (orientation: 'vertical' | 'horizontal') => {
+    updateActiveSlide((prev) => ({ ...prev, imageLayout: orientation }));
   };
 
   const handleAddSlide = () => {
@@ -538,6 +730,64 @@ export function useCarouselState(profile: UserProfile) {
     saveCurrentCarouselsState(updatedCarousels);
   };
 
+  const handleCreateCarouselFromPlannedIdea = async (idea: PlannedContentIdea) => {
+    const prefs = await loadUserPreferences();
+    const slides: Slide[] = [];
+
+    if (idea.slidesContent && idea.slidesContent.length > 0) {
+      idea.slidesContent.forEach((sc, idx) => {
+        const contentType: ContentType = idx === 1 && idea.recommendedStyle === 'comparison' ? 'text_2_images' : (idea.recommendedStyle === 'comparison' ? 'text_2_images' : 'text_1_image');
+        const s = createSlide(contentType, idea.recommendedStyle || 'twitter');
+        if (prefs.theme) s.theme = prefs.theme;
+
+        if (sc.title && s.layoutStyle === 'news_article') {
+          s.title = sc.title;
+        }
+        s.layers.text = [
+          {
+            id: `text_planned_${idx}`,
+            role: 'body',
+            content: sc.bodyText,
+          },
+        ];
+        slides.push(s);
+      });
+    } else {
+      const count = idea.recommendedSlideCount || 4;
+      for (let i = 0; i < count; i++) {
+        const contentType: ContentType = idea.recommendedStyle === 'comparison' ? 'text_2_images' : 'text_1_image';
+        const s = createSlide(contentType, idea.recommendedStyle || 'twitter');
+        if (prefs.theme) s.theme = prefs.theme;
+        slides.push(s);
+      }
+    }
+
+    const newCarousel: Carousel = {
+      id: `carousel_planned_${Date.now()}`,
+      name: idea.title,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+      status: 'draft',
+      aspectRatio: prefs.aspectRatio || '4:5',
+      slides: slides,
+      caption: idea.description,
+      selectedChannels: ['instagram', 'linkedin'],
+    };
+
+    const updated = [newCarousel, ...carousels];
+    await saveCurrentCarouselsState(updated);
+    setActiveCarouselId(newCarousel.id);
+    setActiveSlideIndex(0);
+
+    const savedIdeas = await loadPlannedContentIdeas();
+    const updatedIdeas = savedIdeas.map((i) =>
+      i.id === idea.id ? { ...i, status: 'created' as const, carouselId: newCarousel.id } : i
+    );
+    await savePlannedContentIdeas(updatedIdeas);
+
+    return newCarousel;
+  };
+
   return {
     carousels,
     setCarousels,
@@ -578,5 +828,17 @@ export function useCarouselState(profile: UserProfile) {
     handleCaptionChange,
     handleToggleChannel,
     handleScheduleCarousel,
+    handleUpdateImageTitle,
+    handleUpdateTextAlignment,
+    handleUpdateTitleAlignment,
+    handleUpdateNewsTitle,
+    handleUpdateImageLayout,
+    handleCreateCarouselFromPresetModel,
+    savedSlideTemplates,
+    handleSaveSlideAsTemplate,
+    handleDeleteSavedTemplate,
+    handleRenameSavedTemplate,
+    handleInsertSlideFromTemplate,
+    handleCreateCarouselFromPlannedIdea,
   };
 }

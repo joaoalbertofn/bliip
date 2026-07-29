@@ -39,8 +39,7 @@ export class BufferPublisher implements PublishingAdapter {
         const svc = p.service?.toLowerCase() || '';
         if (channel === 'instagram') return svc.includes('instagram');
         if (channel === 'linkedin') return svc.includes('linkedin');
-        if (channel === 'youtube') return svc.includes('youtube');
-        if (channel === 'tiktok') return svc.includes('tiktok');
+        if (channel === 'facebook') return svc.includes('facebook');
         return false;
       });
 

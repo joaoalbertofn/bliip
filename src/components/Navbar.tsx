@@ -1,6 +1,7 @@
 import React from 'react';
 import { UserProfile, Carousel } from '@/types/carousel';
 import { Sparkles, User, Webhook, Download, Plus, Save } from 'lucide-react';
+import { BliipLogo } from './BliipLogo';
 
 interface NavbarProps {
   carouselName: string;
@@ -46,13 +47,8 @@ export const Navbar: React.FC<NavbarProps> = ({
 
         <div className="h-5 w-px bg-slate-800 hidden md:block" />
 
-        <div className="flex items-center gap-2">
-          <div className="w-8 h-8 rounded-xl bg-gradient-to-tr from-indigo-600 to-violet-500 flex items-center justify-center text-white font-extrabold text-base shadow-glow">
-            B
-          </div>
-          <span className="font-extrabold text-white text-base tracking-tight leading-none hidden sm:inline">
-            Bliip
-          </span>
+        <div onClick={onBackToDashboard} className="cursor-pointer group">
+          <BliipLogo size="sm" showText={true} />
         </div>
       </div>
 

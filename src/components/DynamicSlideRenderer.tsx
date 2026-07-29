@@ -43,7 +43,7 @@ export const DynamicSlideRenderer: React.FC<DynamicSlideRendererProps> = ({
     );
   };
 
-  // Formatação de parágrafos e diálogos usando customFontSize
+  // Formatação de parágrafos e diálogos usando customFontSize e textAlignment
   const renderFormattedText = (rawText: string) => {
     if (!rawText) {
       return (
@@ -55,6 +55,7 @@ export const DynamicSlideRenderer: React.FC<DynamicSlideRendererProps> = ({
 
     const processedHtml = processMarkTags(rawText);
     const paragraphs = processedHtml.split('\n\n');
+    const textAlignClass = slide.textAlignment === 'center' ? 'text-center' : slide.textAlignment === 'right' ? 'text-right' : 'text-left';
 
     return paragraphs.map((p, idx) => {
       const dialogueMatch = p.match(/^([A-Za-z0-9_À-ÿ\s]+):\s*([\s\S]*)/);
@@ -62,7 +63,7 @@ export const DynamicSlideRenderer: React.FC<DynamicSlideRendererProps> = ({
         const speaker = dialogueMatch[1];
         const dialogueBody = dialogueMatch[2];
         return (
-          <div key={idx} className="mb-3 last:mb-0">
+          <div key={idx} className={`mb-3 last:mb-0 ${textAlignClass}`}>
             <span
               className="font-extrabold px-2 py-0.5 rounded mr-2 inline-block"
               style={{
@@ -85,7 +86,7 @@ export const DynamicSlideRenderer: React.FC<DynamicSlideRendererProps> = ({
       return (
         <p
           key={idx}
-          className="mb-3 last:mb-0 leading-relaxed font-normal text-left"
+          className={`mb-3 last:mb-0 leading-relaxed font-normal ${textAlignClass}`}
           style={{ color: theme.text, fontSize: `${customFontSize}px`, lineHeight: 1.4 }}
           dangerouslySetInnerHTML={{ __html: p }}
         />
@@ -100,17 +101,20 @@ export const DynamicSlideRenderer: React.FC<DynamicSlideRendererProps> = ({
         return <TemplateHeader key={idx} profile={profile} themeConfig={theme} />;
 
       case 'title_text':
-        const titleText = slide.title || (slide.layoutStyle === 'news_article' ? 'MAS O PROCESSO NÃO SE RESUME A CORTAR.' : 'Essa é a foto mais incrível da história:');
+        // O título da notícia só deve ser exibido se o estilo visual do slide for 'news_article'
+        if (slide.layoutStyle !== 'news_article') return null;
+
+        const rawTitle = slide.title !== undefined ? slide.title : 'MAS O PROCESSO NÃO SE RESUME A CORTAR.';
+        if (!rawTitle || rawTitle.trim() === '') return null;
+
+        const titleAlignClass = slide.titleAlignment === 'center' ? 'text-center' : slide.titleAlignment === 'right' ? 'text-right' : 'text-left';
+
         return (
-          <div key={idx} className="shrink-0 my-0.5 w-full text-left">
+          <div key={idx} className={`shrink-0 my-0.5 w-full ${titleAlignClass}`}>
             <h2
-              className={`tracking-tight leading-tight ${
-                slide.layoutStyle === 'news_article'
-                  ? 'font-black uppercase'
-                  : 'font-bold'
-              }`}
+              className="font-black uppercase tracking-tight leading-tight"
               style={{ color: theme.text, fontSize: `${Math.round(customFontSize * 1.25)}px`, lineHeight: 1.25 }}
-              dangerouslySetInnerHTML={{ __html: processMarkTags(titleText) }}
+              dangerouslySetInnerHTML={{ __html: processMarkTags(rawTitle) }}
             />
           </div>
         );
@@ -183,7 +187,9 @@ export const DynamicSlideRenderer: React.FC<DynamicSlideRendererProps> = ({
         );
 
       case 'dual_image':
-        const captions = block.imageCaptions || [];
+        const label1 = images[0]?.title !== undefined ? images[0].title : 'Antes';
+        const label2 = images[1]?.title !== undefined ? images[1].title : 'Depois';
+
         return (
           <div
             key={idx}
@@ -192,9 +198,9 @@ export const DynamicSlideRenderer: React.FC<DynamicSlideRendererProps> = ({
             }`}
           >
             <div className="flex-1 min-h-0 h-full w-full flex flex-col relative group">
-              {captions[0] && (
+              {label1 && label1.trim() !== '' && (
                 <span className="text-xs font-bold mb-1 block text-left shrink-0" style={{ color: theme.text }}>
-                  {captions[0]}
+                  {label1}
                 </span>
               )}
               <InteractiveImageContainer
@@ -211,9 +217,9 @@ export const DynamicSlideRenderer: React.FC<DynamicSlideRendererProps> = ({
             </div>
 
             <div className="flex-1 min-h-0 h-full w-full flex flex-col relative group">
-              {captions[1] && (
+              {label2 && label2.trim() !== '' && (
                 <span className="text-xs font-bold mb-1 block text-left shrink-0" style={{ color: theme.text }}>
-                  {captions[1]}
+                  {label2}
                 </span>
               )}
               <InteractiveImageContainer

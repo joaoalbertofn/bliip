@@ -2,12 +2,11 @@ import React from 'react';
 import { Carousel, UserProfile } from '@/types/carousel';
 import { InstagramMockupPreview } from './previews/InstagramMockupPreview';
 import { LinkedInMockupPreview } from './previews/LinkedInMockupPreview';
-import { YouTubeCommunityPreview } from './previews/YouTubeCommunityPreview';
+import { FacebookMockupPreview } from './previews/FacebookMockupPreview';
 import {
   Instagram,
   Linkedin,
-  Youtube,
-  Video,
+  Facebook,
   ChevronRight,
   ChevronLeft,
   Eye
@@ -118,34 +117,19 @@ export const SocialPostPreviewPanel: React.FC<SocialPostPreviewPanelProps> = ({
               );
             }
 
-            if (channelId === 'youtube') {
+            if (channelId === 'facebook') {
               return (
-                <div key="youtube" className="flex flex-col gap-2">
-                  <div className="flex items-center justify-between text-xs font-bold text-red-400">
+                <div key="facebook" className="flex flex-col gap-2">
+                  <div className="flex items-center justify-between text-xs font-bold text-indigo-400">
                     <div className="flex items-center gap-1.5">
-                      <Youtube className="w-3.5 h-3.5" />
-                      <span>YouTube Community Post Preview</span>
+                      <Facebook className="w-3.5 h-3.5" />
+                      <span>Facebook Feed Post Preview</span>
                     </div>
                     <span className="text-[10px] font-normal text-slate-400 font-mono">
                       {carousel.aspectRatio || '4:5'}
                     </span>
                   </div>
-                  <YouTubeCommunityPreview carousel={carousel} profile={profile} />
-                </div>
-              );
-            }
-
-            if (channelId === 'tiktok') {
-              return (
-                <div key="tiktok" className="flex flex-col gap-2">
-                  <div className="flex items-center gap-1.5 text-xs font-bold text-teal-400">
-                    <Video className="w-3.5 h-3.5" />
-                    <span>TikTok Photo Mode Preview</span>
-                  </div>
-                  <div className="bg-slate-950 border border-slate-800 rounded-2xl p-4 text-center text-xs text-slate-400">
-                    <p className="font-semibold text-white mb-1">TikTok Modo Fotos</p>
-                    <p className="text-[11px]">{carousel.slides.length} slides prontos para carrossel no TikTok.</p>
-                  </div>
+                  <FacebookMockupPreview carousel={carousel} profile={profile} />
                 </div>
               );
             }

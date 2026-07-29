@@ -3,7 +3,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import dynamic from 'next/dynamic';
 import { useSession } from 'next-auth/react';
-import { UserProfile, ContentType, LayoutStyle, SocialChannel } from '@/types/carousel';
+import { UserProfile, ContentType, LayoutStyle, SocialChannel, Slide, IntegrationConfig } from '@/types/carousel';
 import { loadUserProfile, saveUserProfile, DEFAULT_USER_PROFILE } from '@/lib/storage';
 import { useCarouselState } from '@/hooks/useCarouselState';
 
@@ -19,6 +19,7 @@ import { MediaTray } from '@/components/MediaTray';
 import { CollapsibleSection } from '@/components/CollapsibleSection';
 import { PostCaptionEditor } from '@/components/PostCaptionEditor';
 import { SocialPostPreviewPanel } from '@/components/SocialPostPreviewPanel';
+import { NewCarouselModal } from '@/components/NewCarouselModal';
 import { triggerLeadSync } from '@/lib/leadSync';
 
 const UserProfileModal = dynamic(
@@ -33,6 +34,20 @@ const ExportModal = dynamic(
   () => import('@/components/ExportModal').then((mod) => mod.ExportModal),
   { ssr: false }
 );
+const SaveTemplateModal = dynamic(
+  () => import('@/components/SaveTemplateModal').then((mod) => mod.SaveTemplateModal),
+  { ssr: false }
+);
+const AddSlideModal = dynamic(
+  () => import('@/components/AddSlideModal').then((mod) => mod.AddSlideModal),
+  { ssr: false }
+);
+const ContentPlanner = dynamic(
+  () => import('@/components/ContentPlanner').then((mod) => mod.ContentPlanner),
+  { ssr: false }
+);
+
+import { SidebarNav } from '@/components/SidebarNav';
 
 import {
   Upload,
@@ -52,12 +67,16 @@ import {
   ChevronRight,
   Send,
   Eye,
-  SlidersHorizontal
+  SlidersHorizontal,
+  AlignLeft,
+  AlignCenter,
+  AlignRight
 } from 'lucide-react';
 
 export default function BliipApp() {
   const { data: session } = useSession();
-  const [viewMode, setViewMode] = useState<'dashboard' | 'editor'>('dashboard');
+  const [viewMode, setViewMode] = useState<'dashboard' | 'editor' | 'planner'>('dashboard');
+  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
   const [profile, setProfile] = useState<UserProfile>(DEFAULT_USER_PROFILE);
   const [selectedImageIndex, setSelectedImageIndex] = useState<number>(0);
   const [canvasZoom, setCanvasZoom] = useState<'fit' | number>('fit');
@@ -73,8 +92,11 @@ export default function BliipApp() {
   const [isExportModalOpen, setIsExportModalOpen] = useState(false);
   const [isNewCarouselModalOpen, setIsNewCarouselModalOpen] = useState(false);
   const [newCarouselSlideCount, setNewCarouselSlideCount] = useState(3);
+  const [isAddSlideModalOpen, setIsAddSlideModalOpen] = useState(false);
+  const [isSaveTemplateModalOpen, setIsSaveTemplateModalOpen] = useState(false);
+  const [slideTargetForSaveTemplate, setSlideTargetForSaveTemplate] = useState<Slide | null>(null);
 
-  const [integrations, setIntegrations] = useState<{ bufferApiKey?: string }>({ bufferApiKey: '' });
+  const [integrations, setIntegrations] = useState<IntegrationConfig>({ bufferApiKey: '' });
   const [connectedChannels, setConnectedChannels] = useState<SocialChannel[]>(['instagram', 'linkedin']);
   const [isBufferConnected, setIsBufferConnected] = useState<boolean>(false);
 
@@ -99,13 +121,12 @@ export default function BliipApp() {
               const svc = p.service?.toLowerCase() || '';
               if (svc.includes('instagram') && !channels.includes('instagram')) channels.push('instagram');
               if (svc.includes('linkedin') && !channels.includes('linkedin')) channels.push('linkedin');
-              if (svc.includes('youtube') && !channels.includes('youtube')) channels.push('youtube');
-              if (svc.includes('tiktok') && !channels.includes('tiktok')) channels.push('tiktok');
+              if (svc.includes('facebook') && !channels.includes('facebook')) channels.push('facebook');
             });
             if (channels.length > 0) {
               setConnectedChannels(channels);
             } else {
-              setConnectedChannels(['instagram', 'linkedin']);
+              setConnectedChannels(['instagram', 'linkedin', 'facebook']);
             }
           }
         } catch (e) {
@@ -165,6 +186,7 @@ export default function BliipApp() {
     handleUpdateCarouselName,
     handleToggleAspectRatio,
     handleCreateNewCarousel,
+    handleCreateCarouselFromPresetModel,
     handleDuplicateCarousel,
     handleDeleteCarousel,
     handleMarkAsSent,
@@ -177,6 +199,7 @@ export default function BliipApp() {
     handleImageTransform,
     handleThemeChange,
     handleBackgroundChange,
+    handleFontSizeChange,
     handleAddSlide,
     handleInsertSlideAt,
     handleDuplicateSlide,
@@ -189,6 +212,17 @@ export default function BliipApp() {
     handleCaptionChange,
     handleToggleChannel,
     handleScheduleCarousel,
+    handleUpdateImageTitle,
+    handleUpdateTextAlignment,
+    handleUpdateTitleAlignment,
+    handleUpdateNewsTitle,
+    handleUpdateImageLayout,
+    savedSlideTemplates,
+    handleSaveSlideAsTemplate,
+    handleDeleteSavedTemplate,
+    handleRenameSavedTemplate,
+    handleInsertSlideFromTemplate,
+    handleCreateCarouselFromPlannedIdea,
   } = useCarouselState(profile);
 
   // Refs de captura para exportação
@@ -230,125 +264,6 @@ export default function BliipApp() {
     );
   }
 
-  // RENDERIZAÇÃO 1: Tela de Dashboard
-  if (viewMode === 'dashboard') {
-    return (
-      <>
-        <Dashboard
-          carousels={carousels}
-          profile={profile}
-          onOpenNewCarouselModal={() => setIsNewCarouselModalOpen(true)}
-          onEditCarousel={(id) => {
-            setActiveCarouselId(id);
-            setActiveSlideIndex(0);
-            setViewMode('editor');
-          }}
-          onDuplicateCarousel={handleDuplicateCarousel}
-          onDeleteCarousel={handleDeleteCarousel}
-          onQuickExportCarousel={(carousel) => {
-            setActiveCarouselId(carousel.id);
-            setActiveSlideIndex(0);
-            setIsExportModalOpen(true);
-          }}
-          onOpenProfileModal={() => setIsProfileModalOpen(true)}
-          onOpenIntegrationsModal={() => setIsIntegrationsModalOpen(true)}
-        />
-
-        {/* Hidden Canvas Elements para exportação rápida no Dashboard */}
-        <div className="fixed top-[-9999px] left-[-9999px] opacity-0 pointer-events-none">
-          {activeCarousel.slides.map((s, idx) => (
-            <div
-              key={s.id}
-              ref={(el) => {
-                hiddenSlideRefs.current[idx] = el;
-              }}
-            >
-              <SlideCanvas
-                slide={s}
-                profile={profile}
-                aspectRatio={activeCarousel.aspectRatio || '4:5'}
-              />
-            </div>
-          ))}
-        </div>
-
-        <UserProfileModal
-          isOpen={isProfileModalOpen}
-          onClose={() => setIsProfileModalOpen(false)}
-          profile={profile}
-          onSave={handleSaveProfile}
-        />
-
-        <IntegrationsModal
-          isOpen={isIntegrationsModalOpen}
-          onClose={() => setIsIntegrationsModalOpen(false)}
-        />
-
-        <ExportModal
-          isOpen={isExportModalOpen}
-          onClose={() => setIsExportModalOpen(false)}
-          carousel={activeCarousel}
-          profile={profile}
-          activeSlideElement={activeSlideRef.current}
-          allSlideElements={hiddenSlideRefs.current.filter(Boolean) as HTMLElement[]}
-          onMarkAsSent={handleMarkAsSent}
-        />
-
-        {isNewCarouselModalOpen && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm p-4">
-            <div className="bg-slate-900 border border-slate-800 rounded-2xl w-full max-w-sm p-6 shadow-2xl">
-              <h3 className="text-lg font-bold text-white mb-1">Criar Novo Conteúdo</h3>
-              <p className="text-xs text-slate-400 mb-5">
-                Escolha a quantidade inicial de slides para o seu carrossel ou post.
-              </p>
-
-              <div className="mb-6">
-                <label className="block text-xs font-semibold text-slate-300 mb-2">
-                  Quantidade Inicial de Slides: <span className="text-indigo-400 font-bold">{newCarouselSlideCount}</span>
-                </label>
-                <input
-                  type="range"
-                  min="1"
-                  max="10"
-                  value={newCarouselSlideCount}
-                  onChange={(e) => setNewCarouselSlideCount(Number(e.target.value))}
-                  className="w-full accent-indigo-500 bg-slate-800 h-2 rounded-lg cursor-pointer"
-                />
-                <div className="flex justify-between text-[10px] text-slate-500 font-mono mt-1">
-                  <span>1 slide (Post Único)</span>
-                  <span>5 slides</span>
-                  <span>10 slides</span>
-                </div>
-              </div>
-
-              <div className="flex items-center justify-end gap-3 pt-3 border-t border-slate-800">
-                <button
-                  onClick={() => setIsNewCarouselModalOpen(false)}
-                  className="px-4 py-2 text-xs font-semibold text-slate-400 hover:text-white"
-                >
-                  Cancelar
-                </button>
-
-                <button
-                  onClick={() => {
-                    handleCreateNewCarousel(newCarouselSlideCount);
-                    setIsNewCarouselModalOpen(false);
-                    setViewMode('editor');
-                  }}
-                  className="px-5 py-2.5 text-xs font-bold bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl shadow-glow transition flex items-center gap-1.5"
-                >
-                  <Plus className="w-4 h-4" />
-                  <span>Criar Conteúdo</span>
-                </button>
-              </div>
-            </div>
-          </div>
-        )}
-      </>
-    );
-  }
-
-  // RENDERIZAÇÃO 2: Tela de Editor com Arquitetura em 3 Colunas
   const maxImagesAllowed =
     activeSlide.contentType === 'text_2_images'
       ? 2
@@ -357,7 +272,57 @@ export default function BliipApp() {
       : 0;
 
   return (
-    <div className="w-screen h-screen flex flex-col overflow-hidden bg-slate-950">
+    <div className="w-screen h-screen flex overflow-hidden bg-slate-950">
+      {/* Sidebar Nav Persistente */}
+      <SidebarNav
+        currentView={viewMode}
+        onNavigate={(view) => setViewMode(view)}
+        isCollapsed={isSidebarCollapsed}
+        onToggleCollapse={() => setIsSidebarCollapsed(!isSidebarCollapsed)}
+        onOpenProfile={() => setIsProfileModalOpen(true)}
+        onOpenIntegrations={() => setIsIntegrationsModalOpen(true)}
+      />
+
+      {/* Conteúdo Principal de Acordo com a View (Offset pl-16 para a barra lateral recolhida) */}
+      <div className="flex-1 pl-16 h-full overflow-hidden flex flex-col relative">
+        {/* VIEW 1: DASHBOARD */}
+        {viewMode === 'dashboard' && (
+          <Dashboard
+            carousels={carousels}
+            profile={profile}
+            onOpenNewCarouselModal={() => setIsNewCarouselModalOpen(true)}
+            onEditCarousel={(id) => {
+              setActiveCarouselId(id);
+              setActiveSlideIndex(0);
+              setViewMode('editor');
+            }}
+            onDuplicateCarousel={handleDuplicateCarousel}
+            onDeleteCarousel={handleDeleteCarousel}
+            onQuickExportCarousel={(carousel) => {
+              setActiveCarouselId(carousel.id);
+              setActiveSlideIndex(0);
+              setIsExportModalOpen(true);
+            }}
+            onOpenProfileModal={() => setIsProfileModalOpen(true)}
+            onOpenIntegrationsModal={() => setIsIntegrationsModalOpen(true)}
+          />
+        )}
+
+        {/* VIEW 2: PLANEJADOR IA & CALENDÁRIO */}
+        {viewMode === 'planner' && (
+          <ContentPlanner
+            profile={profile}
+            apiKey={integrations.apiKey || integrations.bufferApiKey}
+            onCreateCarouselFromIdea={async (idea) => {
+              await handleCreateCarouselFromPlannedIdea(idea);
+              setViewMode('editor');
+            }}
+          />
+        )}
+
+        {/* VIEW 3: Bliip STUDIO (EDITOR VISUAL) */}
+        {viewMode === 'editor' && (
+          <div className="w-full h-full flex flex-col overflow-hidden">
       {/* Top Header Navbar */}
       <Navbar
         carouselName={activeCarousel.name}
@@ -416,20 +381,7 @@ export default function BliipApp() {
 
             {/* Conteúdo de Edição do Slide em Acordeões */}
             <div className="flex-1 overflow-y-auto p-4 flex flex-col gap-4 scrollbar-thin scrollbar-thumb-slate-800">
-              {/* SEÇÃO 1: Bandeja de Mídias (Fotos da História) */}
-              <CollapsibleSection
-                icon={<ImageIcon className="w-4 h-4" />}
-                title="Fotos da História"
-                badgeText={`${(activeCarousel.mediaLibrary || []).length} mídias`}
-                defaultOpen={true}
-              >
-                <MediaTray
-                  mediaLibrary={activeCarousel.mediaLibrary || []}
-                  onUploadMedia={handleUploadMediaToTray}
-                  onRemoveMedia={handleRemoveMediaFromTray}
-                  onCreateSlideFromMedia={handleCreateSlideFromMedia}
-                />
-              </CollapsibleSection>
+
 
               {/* SEÇÃO 2: Estilo Visual & Tipo de Conteúdo */}
               <CollapsibleSection
@@ -440,8 +392,10 @@ export default function BliipApp() {
                 <TemplateSelector
                   currentContentType={activeSlide.contentType || 'text_1_image'}
                   currentLayoutStyle={activeSlide.layoutStyle || 'twitter'}
+                  currentImageLayout={activeSlide.imageLayout || 'horizontal'}
                   onSelectContentType={handleSelectContentType}
                   onSelectLayoutStyle={handleSelectLayoutStyle}
+                  onSelectImageLayout={handleUpdateImageLayout}
                 />
               </CollapsibleSection>
 
@@ -451,6 +405,73 @@ export default function BliipApp() {
                 title="Texto do Slide"
                 defaultOpen={true}
               >
+                {/* RÓTULOS DE IMAGENS SE COMPARATIVO (2 IMAGENS) */}
+                {activeSlide.layoutStyle === 'comparison' && (
+                  <div className="flex flex-col gap-2 mb-3 pb-3 border-b border-slate-800/80">
+                    <label className="text-xs font-semibold text-slate-300 flex items-center justify-between">
+                      <span>Rótulos das Imagens de Comparação</span>
+                      <span className="text-[10px] text-slate-500 font-mono">(Limpar remove do slide)</span>
+                    </label>
+                    <div className="grid grid-cols-2 gap-2">
+                      <div>
+                        <span className="text-[10px] text-slate-400 font-medium block mb-1">Rótulo Imagem 1:</span>
+                        <input
+                          type="text"
+                          value={activeSlide.layers.images?.[0]?.title ?? 'Antes'}
+                          onChange={(e) => handleUpdateImageTitle(0, e.target.value)}
+                          placeholder="Antes"
+                          className="w-full bg-slate-950 border border-slate-700/80 rounded-lg px-2.5 py-1.5 text-white text-xs font-medium focus:outline-none focus:ring-1 focus:ring-indigo-500"
+                        />
+                      </div>
+                      <div>
+                        <span className="text-[10px] text-slate-400 font-medium block mb-1">Rótulo Imagem 2:</span>
+                        <input
+                          type="text"
+                          value={activeSlide.layers.images?.[1]?.title ?? 'Depois'}
+                          onChange={(e) => handleUpdateImageTitle(1, e.target.value)}
+                          placeholder="Depois"
+                          className="w-full bg-slate-950 border border-slate-700/80 rounded-lg px-2.5 py-1.5 text-white text-xs font-medium focus:outline-none focus:ring-1 focus:ring-indigo-500"
+                        />
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* TÍTULO DA NOTÍCIA SE NOTÍCIA */}
+                {activeSlide.layoutStyle === 'news_article' && (
+                  <div className="flex flex-col gap-2 mb-3 pb-3 border-b border-slate-800/80">
+                    <div className="flex items-center justify-between">
+                      <label className="text-xs font-semibold text-slate-300">
+                        Título da Notícia
+                      </label>
+                      <div className="flex items-center gap-1 bg-slate-950 p-0.5 rounded-lg border border-slate-800">
+                        {(['left', 'center', 'right'] as const).map((align) => (
+                          <button
+                            key={align}
+                            type="button"
+                            onClick={() => handleUpdateTitleAlignment(align)}
+                            className={`p-1 rounded transition ${
+                              (activeSlide.titleAlignment || 'left') === align
+                                ? 'bg-indigo-600 text-white'
+                                : 'text-slate-400 hover:text-slate-200'
+                            }`}
+                            title={`Alinhar título à ${align === 'left' ? 'Esquerda' : align === 'center' ? 'Centro' : 'Direita'}`}
+                          >
+                            {align === 'left' ? <AlignLeft className="w-3 h-3" /> : align === 'center' ? <AlignCenter className="w-3 h-3" /> : <AlignRight className="w-3 h-3" />}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                    <input
+                      type="text"
+                      value={activeSlide.title ?? 'MAS O PROCESSO NÃO SE RESUME A CORTAR.'}
+                      onChange={(e) => handleUpdateNewsTitle(e.target.value)}
+                      placeholder="Digite o título em destaque da notícia..."
+                      className="w-full bg-slate-950 border border-slate-700/80 rounded-lg px-3 py-2 text-white text-xs font-bold uppercase focus:outline-none focus:ring-1 focus:ring-indigo-500"
+                    />
+                  </div>
+                )}
+
                 {activeSlide.layoutStyle === 'immersive' ? (
                   <div className="flex flex-col gap-3">
                     <label className="text-xs font-semibold text-slate-300 flex items-center gap-1.5">
@@ -487,24 +508,45 @@ export default function BliipApp() {
                         <span>Conteúdo do Tweet / Post</span>
                       </label>
 
-                      {activeSlide.contentType === 'text_only' && (
-                        <div className="flex items-center gap-1">
-                          {['Você:', 'Bliip:'].map((prefix) => (
+                      <div className="flex items-center gap-2">
+                        {/* Seletor de Alinhamento do Texto Principal */}
+                        <div className="flex items-center gap-1 bg-slate-950 p-0.5 rounded-lg border border-slate-800">
+                          {(['left', 'center', 'right'] as const).map((align) => (
                             <button
-                              key={prefix}
+                              key={align}
                               type="button"
-                              onClick={() => {
-                                const current = activeSlide.layers.text?.[0]?.content || '';
-                                const newText = current ? `${current}\n\n${prefix} ` : `${prefix} `;
-                                handleTextChange(0, newText);
-                              }}
-                              className="px-2 py-0.5 text-[10px] font-bold bg-indigo-950 border border-indigo-700 text-indigo-300 rounded hover:bg-indigo-900 transition"
+                              onClick={() => handleUpdateTextAlignment(align)}
+                              className={`p-1 rounded transition ${
+                                (activeSlide.textAlignment || 'left') === align
+                                  ? 'bg-indigo-600 text-white'
+                                  : 'text-slate-400 hover:text-slate-200'
+                              }`}
+                              title={`Alinhar texto à ${align === 'left' ? 'Esquerda' : align === 'center' ? 'Centro' : 'Direita'}`}
                             >
-                              +{prefix}
+                              {align === 'left' ? <AlignLeft className="w-3 h-3" /> : align === 'center' ? <AlignCenter className="w-3 h-3" /> : <AlignRight className="w-3 h-3" />}
                             </button>
                           ))}
                         </div>
-                      )}
+
+                        {activeSlide.contentType === 'text_only' && (
+                          <div className="flex items-center gap-1">
+                            {['Você:', 'Bliip:'].map((prefix) => (
+                              <button
+                                key={prefix}
+                                type="button"
+                                onClick={() => {
+                                  const current = activeSlide.layers.text?.[0]?.content || '';
+                                  const newText = current ? `${current}\n\n${prefix} ` : `${prefix} `;
+                                  handleTextChange(0, newText);
+                                }}
+                                className="px-2 py-0.5 text-[10px] font-bold bg-indigo-950 border border-indigo-700 text-indigo-300 rounded hover:bg-indigo-900 transition"
+                              >
+                                +{prefix}
+                              </button>
+                            ))}
+                          </div>
+                        )}
+                      </div>
                     </div>
 
                     <HighlightTextEditor
@@ -513,6 +555,33 @@ export default function BliipApp() {
                       rows={5}
                       placeholder="Digite o texto do slide..."
                     />
+
+                    {/* Seletor de Tamanho da Fonte Predefinido (P, M, G, GG) */}
+                    <div className="flex items-center justify-between mt-2 pt-2 border-t border-slate-800/80">
+                      <span className="text-xs font-semibold text-slate-300">Tamanho da Fonte:</span>
+                      <div className="flex items-center gap-1 bg-slate-950 p-1 rounded-lg border border-slate-800">
+                        {[
+                          { label: 'P', size: 16, title: 'Pequeno (16px)' },
+                          { label: 'M', size: 20, title: 'Médio (20px - Padrão)' },
+                          { label: 'G', size: 24, title: 'Grande (24px)' },
+                          { label: 'GG', size: 28, title: 'Extra Grande (28px)' },
+                        ].map((preset) => (
+                          <button
+                            key={preset.size}
+                            type="button"
+                            onClick={() => handleFontSizeChange(preset.size)}
+                            className={`px-2.5 py-1 text-xs font-extrabold rounded-md transition ${
+                              (activeSlide.fontSize ?? 20) === preset.size
+                                ? 'bg-indigo-600 text-white shadow-sm'
+                                : 'text-slate-400 hover:text-slate-200'
+                            }`}
+                            title={preset.title}
+                          >
+                            {preset.label}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
                   </div>
                 )}
               </CollapsibleSection>
@@ -657,11 +726,18 @@ export default function BliipApp() {
               slides={activeCarousel.slides}
               activeIndex={activeSlideIndex}
               onSelectSlide={(idx) => setActiveSlideIndex(idx)}
-              onAddSlide={handleAddSlide}
-              onInsertSlideAt={handleInsertSlideAt}
+              onAddSlide={() => setIsAddSlideModalOpen(true)}
+              onInsertSlideAt={(idx) => {
+                setActiveSlideIndex(idx - 1 >= 0 ? idx - 1 : 0);
+                setIsAddSlideModalOpen(true);
+              }}
               onDuplicateSlide={handleDuplicateSlide}
               onDeleteSlide={handleDeleteSlide}
               onMoveSlide={handleMoveSlide}
+              onOpenSaveTemplateModal={(slide) => {
+                setSlideTargetForSaveTemplate(slide);
+                setIsSaveTemplateModalOpen(true);
+              }}
               onAssignMedia={handleAssignMediaToSlide}
               onCreateSlideFromMedia={handleCreateSlideFromMedia}
             />
@@ -677,6 +753,9 @@ export default function BliipApp() {
           isOpen={isRightPanelOpen}
           onToggleOpen={() => setIsRightPanelOpen(!isRightPanelOpen)}
         />
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Hidden Slide Elements para Captura */}
@@ -721,56 +800,42 @@ export default function BliipApp() {
         onScheduleCarousel={handleScheduleCarousel}
       />
 
-      {isNewCarouselModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm p-4">
-          <div className="bg-slate-900 border border-slate-800 rounded-2xl w-full max-w-sm p-6 shadow-2xl">
-            <h3 className="text-lg font-bold text-white mb-1">Criar Novo Conteúdo</h3>
-            <p className="text-xs text-slate-400 mb-5">
-              Escolha a quantidade inicial de slides para o seu carrossel ou post.
-            </p>
+      <NewCarouselModal
+        isOpen={isNewCarouselModalOpen}
+        onClose={() => setIsNewCarouselModalOpen(false)}
+        onCreateByQuantity={(count) => {
+          handleCreateNewCarousel(count);
+          setViewMode('editor');
+        }}
+        onCreateByModel={(modelId) => {
+          handleCreateCarouselFromPresetModel(modelId);
+          setViewMode('editor');
+        }}
+      />
 
-            <div className="mb-6">
-              <label className="block text-xs font-semibold text-slate-300 mb-2">
-                Quantidade Inicial de Slides: <span className="text-indigo-400 font-bold">{newCarouselSlideCount}</span>
-              </label>
-              <input
-                type="range"
-                min="1"
-                max="10"
-                value={newCarouselSlideCount}
-                onChange={(e) => setNewCarouselSlideCount(Number(e.target.value))}
-                className="w-full accent-indigo-500 bg-slate-800 h-2 rounded-lg cursor-pointer"
-              />
-              <div className="flex justify-between text-[10px] text-slate-500 font-mono mt-1">
-                <span>1 slide (Post Único)</span>
-                <span>5 slides</span>
-                <span>10 slides</span>
-              </div>
-            </div>
+      <AddSlideModal
+        isOpen={isAddSlideModalOpen}
+        onClose={() => setIsAddSlideModalOpen(false)}
+        savedTemplates={savedSlideTemplates}
+        profile={profile}
+        onInsertStandardSlide={() => handleAddSlide()}
+        onInsertSlideFromTemplate={(template) => handleInsertSlideFromTemplate(template)}
+        onDeleteTemplate={handleDeleteSavedTemplate}
+        onRenameTemplate={handleRenameSavedTemplate}
+      />
 
-            <div className="flex items-center justify-end gap-3 pt-3 border-t border-slate-800">
-              <button
-                onClick={() => setIsNewCarouselModalOpen(false)}
-                className="px-4 py-2 text-xs font-semibold text-slate-400 hover:text-white"
-              >
-                Cancelar
-              </button>
-
-              <button
-                onClick={() => {
-                  handleCreateNewCarousel(newCarouselSlideCount);
-                  setIsNewCarouselModalOpen(false);
-                  setViewMode('editor');
-                }}
-                className="px-5 py-2.5 text-xs font-bold bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl shadow-glow transition flex items-center gap-1.5"
-              >
-                <Plus className="w-4 h-4" />
-                <span>Criar Conteúdo</span>
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      <SaveTemplateModal
+        isOpen={isSaveTemplateModalOpen}
+        onClose={() => {
+          setIsSaveTemplateModalOpen(false);
+          setSlideTargetForSaveTemplate(null);
+        }}
+        onSave={(name) => {
+          if (slideTargetForSaveTemplate) {
+            handleSaveSlideAsTemplate(name, slideTargetForSaveTemplate);
+          }
+        }}
+      />
     </div>
   );
 }

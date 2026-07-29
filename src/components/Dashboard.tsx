@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { useSession, signIn, signOut } from 'next-auth/react';
 import { Carousel, UserProfile } from '@/types/carousel';
 import { SlideCanvas } from './SlideCanvas';
+import { BliipLogo } from './BliipLogo';
 import {
   Plus,
   Search,
@@ -70,17 +71,12 @@ export const Dashboard: React.FC<DashboardProps> = ({
     <div className="w-full min-h-screen bg-slate-950 text-slate-100 flex flex-col">
       {/* Top Bar do Dashboard */}
       <header className="w-full bg-slate-900/90 backdrop-blur-md border-b border-slate-800 px-6 py-4 flex items-center justify-between sticky top-0 z-30">
-        <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-indigo-600 to-violet-500 flex items-center justify-center text-white font-extrabold text-xl shadow-glow">
-            B
-          </div>
-          <div>
-            <h1 className="font-extrabold text-white text-xl leading-none flex items-center gap-2">
-              Bliip Studio <span className="text-[10px] bg-indigo-500/20 text-indigo-300 border border-indigo-500/30 px-2 py-0.5 rounded-full font-mono">v1.0</span>
-            </h1>
-            <p className="text-xs text-slate-400 font-medium mt-0.5">Seus Posts & Carrosséis para Instagram</p>
-          </div>
-        </div>
+        <BliipLogo
+          size="lg"
+          showText={true}
+          textVersion="v2.0"
+          subtitle="Seus Posts & Carrosséis para Instagram"
+        />
 
         {/* Busca e Ações Direitas */}
         <div className="flex items-center gap-3">

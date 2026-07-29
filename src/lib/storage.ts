@@ -1,5 +1,5 @@
 import { get, set } from 'idb-keyval';
-import { Carousel, Slide, UserProfile, IntegrationConfig, ContentType, LayoutStyle, SocialChannel } from '@/types/carousel';
+import { Carousel, Slide, UserProfile, IntegrationConfig, ContentType, LayoutStyle, SocialChannel, SavedSlideTemplate, PlannedContentIdea } from '@/types/carousel';
 import { SlideTheme } from '@/lib/themes';
 
 const USER_PROFILE_KEY = 'bliip_user_profile';
@@ -58,6 +58,7 @@ export function sanitizeSlide(s: any): Slide {
   const images = Array.isArray(s?.layers?.images)
     ? s.layers.images.map((img: any) => ({
         ...img,
+        title: typeof img?.title === 'string' ? img.title : undefined,
         scale: typeof img?.scale === 'number' && !isNaN(img.scale) ? img.scale : 1,
         offsetX: typeof img?.offsetX === 'number' && !isNaN(img.offsetX) ? img.offsetX : 0,
         offsetY: typeof img?.offsetY === 'number' && !isNaN(img.offsetY) ? img.offsetY : 0,
@@ -71,6 +72,9 @@ export function sanitizeSlide(s: any): Slide {
     imageLayout,
     templateId: typeof s?.templateId === 'string' ? s.templateId : undefined,
     theme: s?.theme,
+    title: typeof s?.title === 'string' ? s.title : undefined,
+    textAlignment: s?.textAlignment === 'center' || s?.textAlignment === 'right' ? s.textAlignment : 'left',
+    titleAlignment: s?.titleAlignment === 'center' || s?.titleAlignment === 'right' ? s.titleAlignment : 'left',
     background: typeof s?.background === 'string' && s.background ? s.background : '#ffffff',
     layers: {
       text: Array.isArray(s?.layers?.text) ? s.layers.text : [],
@@ -215,5 +219,92 @@ export async function saveIntegrations(config: IntegrationConfig): Promise<void>
   } catch (e) {
     console.warn('Fallback para localStorage ao salvar integrações:', e);
   }
-  localStorage.setItem(INTEGRATIONS_KEY, JSON.stringify(sanitized));
+  try {
+    localStorage.setItem(INTEGRATIONS_KEY, JSON.stringify(sanitized));
+  } catch (err) {
+    console.error('Erro ao salvar integrações no localStorage:', err);
+  }
+}
+
+const SAVED_TEMPLATES_KEY = 'bliip_saved_slide_templates';
+
+export async function loadSavedSlideTemplates(): Promise<SavedSlideTemplate[]> {
+  if (typeof window === 'undefined') return [];
+  try {
+    const val = await get<any>(SAVED_TEMPLATES_KEY);
+    if (Array.isArray(val)) return val;
+    const localVal = localStorage.getItem(SAVED_TEMPLATES_KEY);
+    if (localVal) return JSON.parse(localVal);
+  } catch (e) {
+    console.warn('Erro ao carregar modelos de slides salvos:', e);
+  }
+  return [];
+}
+
+export async function saveSavedSlideTemplates(templates: SavedSlideTemplate[]): Promise<void> {
+  if (typeof window === 'undefined') return;
+  try {
+    await set(SAVED_TEMPLATES_KEY, templates);
+  } catch (e) {
+    console.warn('Fallback para localStorage ao salvar modelos de slides:', e);
+  }
+  try {
+    localStorage.setItem(SAVED_TEMPLATES_KEY, JSON.stringify(templates));
+  } catch (err) {
+    console.error('Erro ao salvar modelos no localStorage:', err);
+  }
+}
+
+const PLANNED_CONTENT_KEY = 'bliip_planned_content_ideas';
+
+const CHAT_HISTORY_KEY = 'bliip_chat_history_v1';
+
+export async function loadPlannedContentIdeas(): Promise<PlannedContentIdea[]> {
+  if (typeof window === 'undefined') return [];
+  try {
+    const val = await get<any>(PLANNED_CONTENT_KEY);
+    if (Array.isArray(val)) return val;
+    const localVal = localStorage.getItem(PLANNED_CONTENT_KEY);
+    if (localVal) return JSON.parse(localVal);
+  } catch (e) {
+    console.warn('Erro ao carregar ideias de conteúdo planejadas:', e);
+  }
+  return [];
+}
+
+export async function savePlannedContentIdeas(ideas: PlannedContentIdea[]): Promise<void> {
+  if (typeof window === 'undefined') return;
+  try {
+    await set(PLANNED_CONTENT_KEY, ideas);
+  } catch (e) {
+    console.warn('Fallback para localStorage ao salvar ideias planejadas:', e);
+  }
+  try {
+    localStorage.setItem(PLANNED_CONTENT_KEY, JSON.stringify(ideas));
+  } catch (err) {
+    console.error('Erro ao salvar ideias planejadas no localStorage:', err);
+  }
+}
+
+export async function loadChatHistory(): Promise<any[]> {
+  if (typeof window === 'undefined') return [];
+  try {
+    const val = await get<any>(CHAT_HISTORY_KEY);
+    if (Array.isArray(val)) return val;
+    const localVal = localStorage.getItem(CHAT_HISTORY_KEY);
+    if (localVal) return JSON.parse(localVal);
+  } catch (e) {
+    console.warn('Erro ao carregar histórico do chat:', e);
+  }
+  return [];
+}
+
+export async function saveChatHistory(messages: any[]): Promise<void> {
+  if (typeof window === 'undefined') return;
+  try {
+    await set(CHAT_HISTORY_KEY, messages);
+  } catch (e) {}
+  try {
+    localStorage.setItem(CHAT_HISTORY_KEY, JSON.stringify(messages));
+  } catch (err) {}
 }

@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Slide } from '@/types/carousel';
 import { CONTENT_TYPES, LAYOUT_STYLES } from '@/lib/templates';
-import { Plus, Copy, Trash2, ArrowLeft, ArrowRight, GripVertical, AlertTriangle, Sparkles } from 'lucide-react';
+import { Plus, Copy, Trash2, ArrowLeft, ArrowRight, GripVertical, AlertTriangle, Sparkles, MoreVertical, Star } from 'lucide-react';
 
 interface SlideReorderBarProps {
   slides: Slide[];
@@ -12,6 +12,7 @@ interface SlideReorderBarProps {
   onDuplicateSlide: (index: number) => void;
   onDeleteSlide: (index: number) => void;
   onMoveSlide: (fromIndex: number, toIndex: number) => void;
+  onOpenSaveTemplateModal?: (slide: Slide) => void;
   onAssignMedia?: (slideId: string, imageIndex: number, url: string) => void;
   onCreateSlideFromMedia?: (url: string) => void;
 }
@@ -25,6 +26,7 @@ export const SlideReorderBar: React.FC<SlideReorderBarProps> = ({
   onDuplicateSlide,
   onDeleteSlide,
   onMoveSlide,
+  onOpenSaveTemplateModal,
   onAssignMedia,
   onCreateSlideFromMedia,
 }) => {
@@ -32,6 +34,7 @@ export const SlideReorderBar: React.FC<SlideReorderBarProps> = ({
   const [confirmDeleteIdx, setConfirmDeleteIdx] = useState<number | null>(null);
   const [dropHoverAdd, setDropHoverAdd] = useState(false);
   const [dropHoverSlideId, setDropHoverSlideId] = useState<string | null>(null);
+  const [activeMenuSlideId, setActiveMenuSlideId] = useState<string | null>(null);
 
   const handleDragStart = (e: React.DragEvent, index: number) => {
     setDraggedIdx(index);
@@ -172,22 +175,65 @@ export const SlideReorderBar: React.FC<SlideReorderBarProps> = ({
                     : 'border-slate-800 bg-slate-900/80 hover:border-slate-700 hover:bg-slate-850'
                 } ${draggedIdx === idx ? 'opacity-40 scale-95 border-dashed border-indigo-400' : ''}`}
               >
-                {/* Botão Vermelho de Apagar Direto no Card */}
-                {slides.length > 1 && (
+                {/* Menu de 3 Pontinhos no canto superior direito */}
+                <div className="absolute top-1.5 right-1.5 z-20">
                   <button
                     onClick={(e) => {
                       e.stopPropagation();
-                      setConfirmDeleteIdx(idx);
+                      setActiveMenuSlideId(activeMenuSlideId === slide.id ? null : slide.id);
                     }}
-                    className="absolute -top-1.5 -right-1.5 w-5 h-5 rounded-full bg-red-600 hover:bg-red-500 text-white flex items-center justify-center shadow-lg border border-red-400 transition transform opacity-90 group-hover:opacity-100 group-hover:scale-110 z-20"
-                    title={`Excluir Slide #${idx + 1}`}
+                    className="p-1 rounded-md bg-slate-800/90 hover:bg-slate-700 text-slate-300 hover:text-white transition border border-slate-700/80 shadow"
+                    title="Opções do Slide"
                   >
-                    <Trash2 className="w-2.5 h-2.5" />
+                    <MoreVertical className="w-3 h-3" />
                   </button>
-                )}
+
+                  {/* Popover do Menu de 3 Pontinhos */}
+                  {activeMenuSlideId === slide.id && (
+                    <div
+                      onClick={(e) => e.stopPropagation()}
+                      className="absolute right-0 top-6 w-36 bg-slate-900 border border-slate-700 rounded-xl shadow-2xl p-1 z-30 flex flex-col gap-0.5 animate-in fade-in zoom-in-95 duration-100"
+                    >
+                      <button
+                        onClick={() => {
+                          onDuplicateSlide(idx);
+                          setActiveMenuSlideId(null);
+                        }}
+                        className="w-full px-2.5 py-1.5 text-[11px] font-semibold text-slate-200 hover:bg-slate-800 rounded-lg flex items-center gap-2 transition text-left"
+                      >
+                        <Copy className="w-3.5 h-3.5 text-indigo-400" />
+                        <span>Duplicar</span>
+                      </button>
+
+                      <button
+                        onClick={() => {
+                          onOpenSaveTemplateModal?.(slide);
+                          setActiveMenuSlideId(null);
+                        }}
+                        className="w-full px-2.5 py-1.5 text-[11px] font-semibold text-slate-200 hover:bg-slate-800 rounded-lg flex items-center gap-2 transition text-left"
+                      >
+                        <Star className="w-3.5 h-3.5 text-amber-400" />
+                        <span>Salvar Modelo</span>
+                      </button>
+
+                      {slides.length > 1 && (
+                        <button
+                          onClick={() => {
+                            setConfirmDeleteIdx(idx);
+                            setActiveMenuSlideId(null);
+                          }}
+                          className="w-full px-2.5 py-1.5 text-[11px] font-semibold text-red-400 hover:bg-red-950/60 rounded-lg flex items-center gap-2 transition text-left"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                          <span>Excluir</span>
+                        </button>
+                      )}
+                    </div>
+                  )}
+                </div>
 
                 {/* Header do Card com Número e Drag Handle */}
-                <div className="flex items-center justify-between w-full">
+                <div className="flex items-center justify-between w-full pr-5">
                   <span
                     className={`text-[9px] font-bold px-1 py-0.5 rounded flex items-center gap-0.5 ${
                       isActive ? 'bg-indigo-600 text-white' : 'bg-slate-800 text-slate-400'
@@ -197,7 +243,7 @@ export const SlideReorderBar: React.FC<SlideReorderBarProps> = ({
                     #{idx + 1}
                   </span>
 
-                  <span className="text-[9px] text-slate-400 font-medium truncate max-w-[50px]">
+                  <span className="text-[9px] text-slate-400 font-medium truncate max-w-[40px]">
                     {templateName.split(' ')[0]}
                   </span>
                 </div>
@@ -210,18 +256,6 @@ export const SlideReorderBar: React.FC<SlideReorderBarProps> = ({
                 {/* Rodapé do Card */}
                 <div className="flex items-center justify-between text-[8px] text-slate-400 font-mono pt-0.5 border-t border-slate-800/60">
                   <span>{slide.layers.images?.length ? `📷 ${slide.layers.images.length}` : '📝 Texto'}</span>
-                  
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      onDuplicateSlide(idx);
-                    }}
-                    className="hidden group-hover:flex items-center gap-0.5 text-[8px] text-indigo-400 hover:text-indigo-300 font-semibold"
-                    title="Duplicar este slide"
-                  >
-                    <Copy className="w-2 h-2" />
-                    <span>Copiar</span>
-                  </button>
                 </div>
               </div>
             </React.Fragment>

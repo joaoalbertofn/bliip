@@ -14,6 +14,7 @@ export const IntegrationsModal: React.FC<IntegrationsModalProps> = ({ isOpen, on
   const [bufferProfiles, setBufferProfiles] = useState<any[]>([]);
   const [isManualProfileId, setIsManualProfileId] = useState(false);
   const [makeWebhookUrl, setMakeWebhookUrl] = useState('');
+  const [geminiApiKey, setGeminiApiKey] = useState('');
   const [isLoadingProfiles, setIsLoadingProfiles] = useState(false);
   const [testStatus, setTestStatus] = useState<{ type: 'success' | 'error'; msg: string; details?: string } | null>(null);
   const [savedSuccess, setSavedSuccess] = useState(false);
@@ -27,6 +28,7 @@ export const IntegrationsModal: React.FC<IntegrationsModalProps> = ({ isOpen, on
         }
         if (cfg.bufferProfileId) setBufferProfileId(cfg.bufferProfileId);
         if (cfg.makeWebhookUrl) setMakeWebhookUrl(cfg.makeWebhookUrl);
+        if (cfg.apiKey) setGeminiApiKey(cfg.apiKey);
       });
     }
   }, [isOpen]);
@@ -87,6 +89,7 @@ export const IntegrationsModal: React.FC<IntegrationsModalProps> = ({ isOpen, on
       bufferApiKey,
       bufferProfileId,
       makeWebhookUrl,
+      apiKey: geminiApiKey,
     };
     saveIntegrations(config).then(() => {
       setSavedSuccess(true);
@@ -221,6 +224,24 @@ export const IntegrationsModal: React.FC<IntegrationsModalProps> = ({ isOpen, on
           </div>
 
           <hr className="border-slate-800 my-1" />
+
+          {/* Chave de API da IA (Google Gemini API Key) */}
+          <div>
+            <label className="text-xs font-semibold text-slate-300 flex items-center gap-1.5 mb-1.5">
+              <Key className="w-3.5 h-3.5 text-purple-400" />
+              <span>Google Gemini API Key (IA Estrategista)</span>
+            </label>
+            <input
+              type="text"
+              value={geminiApiKey}
+              onChange={(e) => setGeminiApiKey(e.target.value)}
+              placeholder="Ex: AIzaSyA1b2c3d4e5..."
+              className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2.5 text-white text-xs font-mono focus:outline-none focus:ring-2 focus:ring-purple-500"
+            />
+            <p className="text-[10px] text-slate-500 mt-1">
+              Obtenha gratuitamente no Google AI Studio: <strong className="text-slate-400">aistudio.google.com/app/apikey</strong>.
+            </p>
+          </div>
 
           {/* Opção Alternativa de Webhook (Make.com / N8n) */}
           <div>

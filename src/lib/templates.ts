@@ -133,6 +133,7 @@ export function createSlide(
           {
             id: `img_1`,
             position: 'top',
+            title: 'Antes',
             source: {
               type: 'upload',
               url: DEFAULT_STUDENT_FRAMEWORKS.visibilityComparison.imageUrl1!,
@@ -141,6 +142,7 @@ export function createSlide(
           {
             id: `img_2`,
             position: 'bottom',
+            title: 'Depois',
             source: {
               type: 'upload',
               url: DEFAULT_STUDENT_FRAMEWORKS.visibilityComparison.imageUrl2!,

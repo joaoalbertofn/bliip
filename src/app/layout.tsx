@@ -5,6 +5,11 @@ import './globals.css';
 export const metadata: Metadata = {
   title: 'Bliip — Criador de Carrosséis para Instagram',
   description: 'Crie posts e carrosséis de texto e imagem para Instagram inspirados no estilo Bruno Perini e Sadhguru.',
+  icons: {
+    icon: '/logo.png',
+    shortcut: '/logo.png',
+    apple: '/logo.png',
+  },
 };
 
 export default function RootLayout({

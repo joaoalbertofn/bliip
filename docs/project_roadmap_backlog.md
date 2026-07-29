@@ -21,5 +21,15 @@ Este documento registra as funcionalidades aprovadas e planejadas para o futuro 
 
 ---
 
-### 3. 📊 Sincronização de Leads no Google Sheets
-- **Status**: **CONCLUÍDO** (Integração com deduplicação por e-mail e rastreamento de último acesso já ativa no Vercel).
+---
+
+### 4. 🎬 Suporte a Vídeo nos Slots dos Slides (`MediaLayer` & Video Trimmer)
+- **Status**: **PENDENTE (Prioridade Baixa - Arquitetado)**
+- **Plano de Referência**: [docs/feature_video_support_plan.md](file:///Volumes/Midia/Antigravity%20Projeto/Bliip/docs/feature_video_support_plan.md)
+- **Descrição**:
+  - Permitir que os campos que hoje suportam fotos aceitem também vídeos (MP4/WebM), inclusive em layouts com 2 mídias (*Comparison*).
+  - Implementar drag & drop, zoom (scale) e pan (offset X/Y) para vídeos.
+  - Timeline interativa de corte para ajustar trechos de até 60 segundos com opção para ligar/desligar áudio.
+  - Gravação do slide completo em MP4 (1080x1350 @ 4Mbps, ~30MB para 60s).
+  - Armazenamento local no IndexedDB e upload direto para Cloudflare R2 via Presigned URLs (evitando limites da Vercel).
+

@@ -3,20 +3,24 @@ import { ContentType, LayoutStyle } from '@/types/carousel';
 import { CONTENT_TYPES, LAYOUT_STYLES } from '@/lib/templates';
 import { Layout, FileText, Image as ImageIcon, Layers, Sparkles, Twitter } from 'lucide-react';
 
-import { canChangeContentType } from '@/domain';
+import { canChangeContentType, canChangeOrientation } from '@/domain';
 
 interface TemplateSelectorProps {
   currentContentType: ContentType;
   currentLayoutStyle: LayoutStyle;
+  currentImageLayout?: 'vertical' | 'horizontal';
   onSelectContentType: (contentType: ContentType) => void;
   onSelectLayoutStyle: (layoutStyle: LayoutStyle) => void;
+  onSelectImageLayout?: (orientation: 'vertical' | 'horizontal') => void;
 }
 
 export const TemplateSelector: React.FC<TemplateSelectorProps> = ({
   currentContentType,
   currentLayoutStyle,
+  currentImageLayout = 'horizontal',
   onSelectContentType,
   onSelectLayoutStyle,
+  onSelectImageLayout,
 }) => {
   const getContentIcon = (type: ContentType) => {
     switch (type) {
@@ -111,7 +115,7 @@ export const TemplateSelector: React.FC<TemplateSelectorProps> = ({
                     ? 'border-amber-500 bg-amber-950/30 shadow-glow ring-1 ring-amber-500/50 text-white font-bold'
                     : 'border-slate-800 bg-slate-900/60 hover:bg-slate-800 text-slate-400'
                 }`}
-                title={isDisabled ? 'O estilo comparativo requer 2 imagens' : type.name}
+                title={isDisabled ? 'O estilo comparativo exige 2 imagens, e os outros estilos exigem 1 ou 0 imagens.' : type.name}
               >
                 {getContentIcon(type.id)}
                 <span className="text-[10px] font-medium leading-tight">{type.name}</span>
@@ -119,6 +123,44 @@ export const TemplateSelector: React.FC<TemplateSelectorProps> = ({
             );
           })}
         </div>
+
+        {/* SELETOR DE ORIENTAÇÃO DAS IMAGENS (Horizontal vs Vertical) */}
+        {canChangeOrientation(currentLayoutStyle, currentContentType) && (
+          <div className="mt-2.5 pt-2.5 border-t border-slate-800/80 flex flex-col gap-1.5">
+            <label className="text-[11px] font-semibold text-slate-300 flex items-center justify-between">
+              <span>Orientação das Imagens</span>
+              <span className="text-[10px] font-mono text-indigo-400">
+                {currentImageLayout === 'horizontal' ? 'Lado a Lado' : 'Empilhado'}
+              </span>
+            </label>
+
+            <div className="grid grid-cols-2 gap-1.5">
+              <button
+                type="button"
+                onClick={() => onSelectImageLayout?.('vertical')}
+                className={`py-1.5 px-2 rounded-lg border text-xs font-bold transition flex items-center justify-center gap-1.5 ${
+                  currentImageLayout !== 'horizontal'
+                    ? 'bg-indigo-600 text-white border-indigo-500 shadow-sm'
+                    : 'bg-slate-900 text-slate-400 border-slate-800 hover:text-slate-200'
+                }`}
+              >
+                <span>📱 Vertical</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => onSelectImageLayout?.('horizontal')}
+                className={`py-1.5 px-2 rounded-lg border text-xs font-bold transition flex items-center justify-center gap-1.5 ${
+                  currentImageLayout === 'horizontal'
+                    ? 'bg-indigo-600 text-white border-indigo-500 shadow-sm'
+                    : 'bg-slate-900 text-slate-400 border-slate-800 hover:text-slate-200'
+                }`}
+              >
+                <span>🖥️ Horizontal</span>
+              </button>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );

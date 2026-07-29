@@ -44,6 +44,8 @@ export const ModuleKind = {
 export const ModuleResolutionKind = {
   Classic: 1,
   NodeJs: 2,
+  Node10: 2,
+  Node12: 3,
   Node16: 3,
   NodeNext: 4,
   Bundler: 100,
@@ -82,15 +84,29 @@ export function parseJsonConfigFileContent(json, host, basePath) {
   const compilerOptions = json?.compilerOptions || {};
   return {
     options: {
-      ...compilerOptions,
-      moduleResolution: ModuleResolutionKind.Bundler,
+      allowJs: true,
+      skipLibCheck: true,
+      noEmit: true,
+      esModuleInterop: true,
+      resolveJsonModule: true,
+      isolatedModules: true,
+      incremental: true,
       paths: compilerOptions.paths || {},
+      ...compilerOptions,
+      strict: true,
+      module: ModuleKind.ESNext,
+      jsx: JsxEmit.Preserve,
+      moduleResolution: ModuleResolutionKind.Bundler,
+      target: ScriptTarget.ES2020,
     },
     fileNames: [],
     raw: {
       ...json,
       compilerOptions: {
         ...compilerOptions,
+        strict: true,
+        module: 'esnext',
+        jsx: 'preserve',
         moduleResolution: 'bundler',
       },
     },

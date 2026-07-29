@@ -3,8 +3,7 @@ import { SocialChannel } from '@/types/carousel';
 export const SOCIAL_CAPTION_LIMITS: Record<SocialChannel, number> = {
   instagram: 2200,
   linkedin: 3000,
-  youtube: 5000,
-  tiktok: 2200,
+  facebook: 63206,
 };
 
 export interface CaptionValidationResult {

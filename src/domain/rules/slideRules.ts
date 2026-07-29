@@ -22,14 +22,27 @@ export function getMaxImagesForContentType(contentType: ContentType): number {
 }
 
 /**
- * Valida se um estilo de layout permite a alteração de tipo de conteúdo.
- * Exemplo: O estilo 'comparison' (Comparativo) exige estritamente 'text_2_images'.
+ * Valida se um tipo de conteúdo é permitido para o estilo de layout atual.
+ * - 'comparison': Permite APENAS 'text_2_images'.
+ * - Outros estilos ('twitter', 'immersive', 'news_article'): Permite apenas 'text_only' e 'text_1_image'.
  */
-export function canChangeContentType(layoutStyle: LayoutStyle, targetContentType: ContentType): boolean {
-  if (layoutStyle === 'comparison' && targetContentType !== 'text_2_images') {
-    return false;
+export function isContentTypeAllowed(layoutStyle: LayoutStyle, targetContentType: ContentType): boolean {
+  if (layoutStyle === 'comparison') {
+    return targetContentType === 'text_2_images';
   }
-  return true;
+  return targetContentType !== 'text_2_images';
+}
+
+export function canChangeContentType(layoutStyle: LayoutStyle, targetContentType: ContentType): boolean {
+  return isContentTypeAllowed(layoutStyle, targetContentType);
+}
+
+/**
+ * Valida se o seletor de orientação das imagens (Horizontal vs Vertical) deve ficar ativo.
+ * Ativo apenas para o estilo 'comparison' ou quando o conteúdo tiver 2 imagens ('text_2_images').
+ */
+export function canChangeOrientation(layoutStyle: LayoutStyle, contentType: ContentType): boolean {
+  return layoutStyle === 'comparison' || contentType === 'text_2_images';
 }
 
 /**
