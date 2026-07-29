@@ -68,7 +68,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
   const carouselToDelete = carousels.find((c) => c.id === confirmDeleteId);
 
   return (
-    <div className="w-full min-h-screen bg-slate-950 text-slate-100 flex flex-col">
+    <div className="w-full h-full bg-slate-950 text-slate-100 flex flex-col overflow-y-auto scrollbar-thin">
       {/* Top Bar do Dashboard */}
       <header className="w-full bg-slate-900/90 backdrop-blur-md border-b border-slate-800 px-6 py-4 flex items-center justify-between sticky top-0 z-30">
         <BliipLogo
