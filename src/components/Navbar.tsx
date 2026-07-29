@@ -15,6 +15,7 @@ interface NavbarProps {
   onOpenIntegrationsModal: () => void;
   onOpenExportModal: () => void;
   onBackToDashboard: () => void;
+  backButtonLabel?: string;
   isSaving: boolean;
 }
 
@@ -30,19 +31,20 @@ export const Navbar: React.FC<NavbarProps> = ({
   onOpenIntegrationsModal,
   onOpenExportModal,
   onBackToDashboard,
+  backButtonLabel,
   isSaving,
 }) => {
   return (
     <header className="w-full bg-slate-900/90 backdrop-blur-md border-b border-slate-800 px-6 py-3.5 flex items-center justify-between z-30 shrink-0">
-      {/* Brand Logo & Back to Dashboard Button */}
+      {/* Brand Logo & Back Button */}
       <div className="flex items-center gap-4">
         <button
           onClick={onBackToDashboard}
           className="flex items-center gap-1.5 px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-200 rounded-xl border border-slate-700 text-xs font-bold transition shadow-sm"
-          title="Voltar para a página principal do Dashboard"
+          title={`Voltar para ${backButtonLabel || 'Dashboard'}`}
         >
           <span className="text-indigo-400 font-extrabold text-sm">‹</span>
-          <span>Dashboard</span>
+          <span>{backButtonLabel || 'Dashboard'}</span>
         </button>
 
         <div className="h-5 w-px bg-slate-800 hidden md:block" />

@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Carousel, Slide, UserProfile, ImageSource, ContentType, LayoutStyle, SocialChannel, SavedSlideTemplate, PlannedContentIdea } from '@/types/carousel';
 import { loadCarousels, saveCarousels, loadUserPreferences, saveUserPreferences, DEFAULT_USER_PREFERENCES, loadSavedSlideTemplates, saveSavedSlideTemplates, loadPlannedContentIdeas, savePlannedContentIdeas } from '@/lib/storage';
-import { createSlide } from '@/lib/templates';
+import { createSlide, formatSmartSlideText, detectComparisonLabels } from '@/lib/templates';
 import { DEFAULT_STUDENT_FRAMEWORKS } from '@/config/defaultContent';
 import { PRESET_MODELS } from '@/config/presetModels';
 import { SlideTheme, SLIDE_THEMES } from '@/lib/themes';
@@ -734,30 +734,77 @@ export function useCarouselState(profile: UserProfile) {
     const prefs = await loadUserPreferences();
     const slides: Slide[] = [];
 
+    const isComparisonTopic =
+      idea.recommendedStyle === 'comparison' ||
+      idea.title.toLowerCase().includes('vs') ||
+      idea.title.toLowerCase().includes('antes') ||
+      idea.title.toLowerCase().includes('invisível');
+
+    const comparisonLabels = detectComparisonLabels(idea.description || '', idea.title);
+
     if (idea.slidesContent && idea.slidesContent.length > 0) {
       idea.slidesContent.forEach((sc, idx) => {
-        const contentType: ContentType = idx === 1 && idea.recommendedStyle === 'comparison' ? 'text_2_images' : (idea.recommendedStyle === 'comparison' ? 'text_2_images' : 'text_1_image');
-        const s = createSlide(contentType, idea.recommendedStyle || 'twitter');
+        const isComparisonSlide = isComparisonTopic && (idx === 1 || idea.recommendedStyle === 'comparison');
+        const contentType: ContentType = isComparisonSlide ? 'text_2_images' : 'text_1_image';
+        const style: LayoutStyle = isComparisonSlide ? 'comparison' : (idea.recommendedStyle || 'twitter');
+
+        const s = createSlide(contentType, style);
         if (prefs.theme) s.theme = prefs.theme;
 
-        if (sc.title && s.layoutStyle === 'news_article') {
+        if (sc.title) {
           s.title = sc.title;
         }
+
+        // Títulos e Manchetes para templates específicos (ex: news_article)
+        if (style === 'news_article') {
+          s.newsTitle = sc.title || idea.title || 'ALERTA DE POSICIONAMENTO';
+        }
+
+        // Se for slide comparativo, aplica os rótulos corretos das duas imagens
+        if (isComparisonSlide) {
+          s.imageLabels = [comparisonLabels[0], comparisonLabels[1]];
+        }
+
+        // Formatação inteligente do texto do slide
+        const formattedBody = formatSmartSlideText(sc.bodyText, sc.title);
         s.layers.text = [
           {
             id: `text_planned_${idx}`,
             role: 'body',
-            content: sc.bodyText,
+            content: formattedBody,
           },
         ];
+
+        // Se houver camadas de imagem, deixa sem URL para upload pelo usuário
+        if (s.layers.images && s.layers.images.length > 0) {
+          s.layers.images = s.layers.images.map((img) => ({
+            ...img,
+            source: { type: 'upload', url: '' },
+          }));
+        }
+
         slides.push(s);
       });
     } else {
       const count = idea.recommendedSlideCount || 4;
       for (let i = 0; i < count; i++) {
-        const contentType: ContentType = idea.recommendedStyle === 'comparison' ? 'text_2_images' : 'text_1_image';
-        const s = createSlide(contentType, idea.recommendedStyle || 'twitter');
+        const isComparisonSlide = isComparisonTopic && i === 1;
+        const contentType: ContentType = isComparisonSlide ? 'text_2_images' : 'text_1_image';
+        const style: LayoutStyle = isComparisonSlide ? 'comparison' : (idea.recommendedStyle || 'twitter');
+
+        const s = createSlide(contentType, style);
         if (prefs.theme) s.theme = prefs.theme;
+
+        if (isComparisonSlide) {
+          s.imageLabels = [comparisonLabels[0], comparisonLabels[1]];
+        }
+
+        if (s.layers.images && s.layers.images.length > 0) {
+          s.layers.images = s.layers.images.map((img) => ({
+            ...img,
+            source: { type: 'upload', url: '' },
+          }));
+        }
         slides.push(s);
       }
     }
@@ -774,10 +821,11 @@ export function useCarouselState(profile: UserProfile) {
       selectedChannels: ['instagram', 'linkedin'],
     };
 
-    const updated = [newCarousel, ...carousels];
-    await saveCurrentCarouselsState(updated);
+    const updatedCarousels = [...carousels, newCarousel];
+    setCarousels(updatedCarousels);
     setActiveCarouselId(newCarousel.id);
     setActiveSlideIndex(0);
+    await saveCarousels(updatedCarousels);
 
     const savedIdeas = await loadPlannedContentIdeas();
     const updatedIdeas = savedIdeas.map((i) =>

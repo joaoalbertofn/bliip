@@ -76,6 +76,7 @@ import {
 export default function BliipApp() {
   const { data: session } = useSession();
   const [viewMode, setViewMode] = useState<'dashboard' | 'editor' | 'planner'>('dashboard');
+  const [previousView, setPreviousView] = useState<'dashboard' | 'planner'>('dashboard');
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
   const [profile, setProfile] = useState<UserProfile>(DEFAULT_USER_PROFILE);
   const [selectedImageIndex, setSelectedImageIndex] = useState<number>(0);
@@ -294,6 +295,7 @@ export default function BliipApp() {
             onEditCarousel={(id) => {
               setActiveCarouselId(id);
               setActiveSlideIndex(0);
+              setPreviousView('dashboard');
               setViewMode('editor');
             }}
             onDuplicateCarousel={handleDuplicateCarousel}
@@ -314,6 +316,7 @@ export default function BliipApp() {
             profile={profile}
             apiKey={integrations.apiKey || integrations.bufferApiKey}
             onCreateCarouselFromIdea={async (idea) => {
+              setPreviousView('planner');
               await handleCreateCarouselFromPlannedIdea(idea);
               setViewMode('editor');
             }}
@@ -338,7 +341,8 @@ export default function BliipApp() {
         onOpenProfileModal={() => setIsProfileModalOpen(true)}
         onOpenIntegrationsModal={() => setIsIntegrationsModalOpen(true)}
         onOpenExportModal={() => setIsExportModalOpen(true)}
-        onBackToDashboard={() => setViewMode('dashboard')}
+        onBackToDashboard={() => setViewMode(previousView)}
+        backButtonLabel={previousView === 'planner' ? 'IA Estrategista' : 'Dashboard'}
         isSaving={isSaving}
       />
 

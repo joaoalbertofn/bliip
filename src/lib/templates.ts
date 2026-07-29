@@ -289,3 +289,84 @@ export function createSlideFromTemplate(templateId: string): Slide {
   if (templateId === 'template_c') return createSlide('text_2_images', 'twitter');
   return createSlide('text_1_image', 'twitter');
 }
+
+// Utilitário para formatar texto de slide de forma inteligente (Estilo Referência: Pílula topo, Negrito nas palavras e Marca-texto no desfecho)
+export function formatSmartSlideText(rawText: string, slideTitle?: string): string {
+  if (!rawText) return '';
+  let text = rawText.trim();
+
+  // Se já tiver marcações <mark> manuais ou **negrito**, faz apenas limpeza básica
+  if (text.includes('<mark>') && text.includes('**')) {
+    return text;
+  }
+
+  const lines = text.split('\n').map((l) => l.trim()).filter(Boolean);
+
+  if (lines.length > 1) {
+    const formattedLines: string[] = [];
+
+    lines.forEach((line, idx) => {
+      let l = line;
+
+      // 1. Se a primeira linha for um aviso/pergunta de abertura, ajusta para pílula no topo
+      if (idx === 0 && (l.endsWith(':') || l.includes('comum') || l.includes('pessoas') || l.includes('viés') || l.includes('regra'))) {
+        const cleanTitle = l.replace(/:$/, '');
+        l = `${cleanTitle}:`;
+      }
+      // 2. Se for item de lista (- ... ou * ...), aplica negrito na palavra de destaque final/chave
+      else if (l.startsWith('-') || l.startsWith('*')) {
+        if (!l.includes('**')) {
+          l = l.replace(/([-\*]\s*.*?)\b([A-Za-z0-9_À-ÿ"]{3,20})\b([.!?"]*)$/, '$1**$2**$3');
+        }
+      }
+      // 3. Se for a última linha de desfecho/conclusão, envolve com <mark>
+      else if (idx === lines.length - 1 && !l.includes('<mark>')) {
+        l = `<mark>${l}</mark>`;
+      }
+
+      formattedLines.push(l);
+    });
+
+    return formattedLines.join('\n\n');
+  }
+
+  // Para textos de parágrafo único longos:
+  const quoteMatch = text.match(/(["'“][^"'”]+["'”])/);
+  if (quoteMatch && !text.includes('<mark>')) {
+    text = text.replace(quoteMatch[1], `<mark>${quoteMatch[1]}</mark>`);
+  } else if (!text.includes('<mark>')) {
+    // Aplica negrito em conceitos-chave e marca-texto na última frase
+    const sentences = text.split(/(?<=[.!?])\s+/);
+    if (sentences.length > 1) {
+      const lastSentence = sentences.pop()!;
+      const body = sentences.join(' ');
+      const boldBody = body.replace(/\b(nicho|equipamento|plano|idéias|recursos|networking|viés de ação|falhar rápido|preço|autoridade|executar)\b/gi, '**$1**');
+      return `${boldBody}\n\n<mark>${lastSentence}</mark>`;
+    }
+  }
+
+  return text;
+}
+
+// Utilitário para detectar os dois lados da comparação e extrair rótulos adequados (ex: ['Antes', 'Depois'])
+export function detectComparisonLabels(slideText: string, ideaTitle: string): [string, string] {
+  const combined = `${ideaTitle} ${slideText}`.toLowerCase();
+
+  if (combined.includes('invisível') || combined.includes('aparece')) {
+    return ['Profissional Invisível', 'Profissional que Aparece'];
+  }
+  if (combined.includes('antes') || combined.includes('depois')) {
+    return ['Antes', 'Depois'];
+  }
+  if (combined.includes('erro') || combined.includes('certo') || combined.includes('solução')) {
+    return ['O Erro Comum', 'A Solução'];
+  }
+  if (combined.includes('antigo') || combined.includes('novo')) {
+    return ['Jeito Antigo', 'Novo Método'];
+  }
+  if (combined.includes('caos') || combined.includes('método')) {
+    return ['Sem Método (Caos)', 'Com Método (Previsível)'];
+  }
+
+  return ['Opção A', 'Opção B'];
+}

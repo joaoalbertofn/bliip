@@ -34,13 +34,21 @@ export const DynamicSlideRenderer: React.FC<DynamicSlideRendererProps> = ({
   // Tamanho dinâmico da fonte vindo do slide (Padrão: 20px)
   const customFontSize = slide.fontSize ?? 20;
 
-  // Processar marcações <mark> com as cores do tema ativo
+  // Processar marcações <mark> e **negrito** com as cores do tema ativo
   const processMarkTags = (htmlText: string) => {
     if (!htmlText) return htmlText;
-    return htmlText.replace(
-      /<mark class="([^"]*)">/g,
-      `<mark style="background-color: ${theme.markBg}; color: ${theme.markText}; padding: 2px 6px; border-radius: 4px; font-weight: 600;">`
+    let formatted = htmlText;
+    
+    // Converter markdown bold **texto** para <strong>texto</strong>
+    formatted = formatted.replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>');
+    
+    // Formatar tags <mark> com o fundo marca-texto e texto em contraste
+    formatted = formatted.replace(
+      /<mark(?:\s+class="[^"]*")?>([\s\S]*?)<\/mark>/gi,
+      `<mark style="background-color: ${theme.markBg}; color: ${theme.markText}; padding: 3px 8px; border-radius: 6px; font-weight: 700; display: inline-block;">$1</mark>`
     );
+    
+    return formatted;
   };
 
   // Formatação de parágrafos e diálogos usando customFontSize e textAlignment

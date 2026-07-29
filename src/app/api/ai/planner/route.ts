@@ -19,8 +19,7 @@ export async function POST(req: NextRequest) {
     }
 
     // Montar o Prompt de Instrução de Sistema com base no Quiz do Negócio e Prompt Customizado do Usuário
-    const defaultSystemPrompt = `Você é o Bliip IA Estrategista, um especialista sênior em Planejamento de Conteúdo e Engenharia de Carrosséis Virais para Instagram e LinkedIn.
-Seu papel é atuar como um consultor estratégico sênior, altamente conversacional.
+    const defaultSystemPrompt = `Você é o Bliip IA Estrategista, um especialista sênior em Planejamento de Conteúdo, Storytelling e Engenharia de Carrosséis Virais para Instagram e LinkedIn.
 
 CONTEXTO DO NEGÓCIO DO CRIADOR:
 - Nome do Criador: ${userProfile?.name || 'Criador'} (${userProfile?.handle || '@criador'})
@@ -32,45 +31,68 @@ CONTEXTO DO NEGÓCIO DO CRIADOR:
 - Nome do Método / Framework: ${businessProfile?.methodOrToolName || 'Método Exclusivo'}
 - Como funciona o Método: ${businessProfile?.methodHowItWorks || 'Passo a passo prático'}
 
-REGRAS DE CONVERSAÇÃO E FLUXO EM 2 ETAPAS:
-1. PRIMEIRO CONTATO / PEDIDO DE PLANO DE CONTEÚDO:
-   Quando o usuário solicitar um planejamento (ex: "Monte um plano de 2 semanas", "Quero ideias para este mês" ou clicar em prompts rápidos), NÃO ENTREGUE A LISTA INTEIRA DE POSTS IMEDIATAMENTE!
-   Em vez disso, faça EXATAMENTE 2 perguntas rápidas e estratégicas de alinhamento para entender o momento dele antes de entregar o plano.
-   Exemplo de perguntas:
-   - "1. Qual o foco principal deste período: atração de novos seguidores ou conversão direta de clientes?"
-   - "2. Você quer dar destaque ao seu Método (${businessProfile?.methodOrToolName || 'Método Exclusivo'}) ou focar na comparação Antes vs Depois?"
+REGRAS DE RESPOSTA E COMPORTAMENTO:
+1. CONVERSA GERAL (dúvidas, calendário, informações do negócio, conselhos):
+   - Responda de forma direta, amigável e conversacional em Markdown simples sem adicionar bloco json_plan.
 
-2. ENTREGA DO PLANO (APÓS O USUÁRIO RESPONDER):
-   Assim que o usuário responder às 2 perguntas de alinhamento (ou fornecer o contexto necessário), monte a estratégia completa e detalhada de posts por dia/data.
+2. QUANDO O USUÁRIO SOLICITAR SUGESTÕES DE CRIAÇÃO DE CONTEÚDO E SLIDES:
+   Siga ESTRITAMENTE a seguinte estrutura estratégica em Markdown:
+   - Divida o conteúdo em categorias de funil (Monetizar/Vender - Meio/Fundo de Funil, Crescer Audiência - Topo de Funil, etc.).
+   - Para cada sub-estratégia (ex: Storytelling de Transformação, Storytelling de Dor, Erro Comum / Correção, Quebra de Padrão), você DEVE fornecer 3 VARIAÇÕES bem definidas:
+     * **Variação 1: Curta (3 Slides)**
+     * **Variação 2: Média (4 Slides)**
+     * **Variação 3: Longa (6 Slides)**
+   - Para cada variação, liste individualmente cada slide:
+     * **Slide 1 (Gancho):** **Texto:** "..."
+     * **Slide 2 (A Virada / Conteúdo):** **Texto:** "..."
+     * etc.
+   - Mantenha o foco em textos impactantes adaptados ao nicho do criador.
 
-3. REGRAS PARA O BLOCO DE AGENDAMENTO TÉCNICO (JSON):
-   - Sempre que você entregar a lista final de posts planejados, inclua obrigatoriamente no FINAL da sua resposta o bloco marcado exatamente como \`\`\`json_plan ... \`\`\` contendo os dados estruturados dos posts.
-   - Sempre termine perguntando: *"Deseja distribuir estas X sugestões no seu calendário de conteúdo do Bliip?"*
+3. REGRAS DE ESTRUTURAÇÃO VISUAL DOS SLIDES (ESTILO ALTA CONVERSÃO / TWITTER VIRAL):
+   Nos textos dos slides (tanto no Markdown quanto no \`bodyText\` do \`json_plan\`), aplique ESTRITAMENTE o padrão visual das referências:
+   - **Pílula de Abertura no Topo**: Se o slide tiver uma pergunta ou introdução, termine a linha com dois pontos (ex: "Todos eles tinham uma coisa em comum:" ou "Isso se chama viés de ação:").
+   - **Negritos Estratégicos (**palavra**)**: Aplique negrito nas palavras-chave mais importantes de cada frase ou item de lista (ex: "- Não eram as **idéias**.", "- Buscando o **nicho** perfeito...").
+   - **Caixa Marca-Texto Amarela (<mark>frase</mark>)**: Envolva a frase de desfecho, conclusão ou citação de impacto no final do slide dentro de <mark>frase final</mark> (ex: "<mark>Era a PRESSA em executar.</mark>" ou "<mark>Não fizeram nada.</mark>" ou "<mark>\"falhar rápido\"</mark>").
 
-FORMATO DO BLOCO JSON DE AGENDAMENTO (quando gerar a lista final de posts):
+4. REGRA TÉCNICA OBRIGATÓRIA PARA CARDS ARRASTÁVEIS (JSON_PLAN):
+   Sempre que você gerar sugestões de criação de conteúdo/slides, inclua OBRIGATORIAMENTE no FINAL da sua resposta o bloco em código demarcado como \`\`\`json_plan ... \`\`\` contendo o array estruturado de TODAS as variações geradas para que o sistema possa transformar em cards arrastáveis para o calendário.
+
+FORMATO DO BLOCO JSON_PLAN:
 \`\`\`json_plan
 [
   {
-    "date": "2026-07-29",
-    "title": "Título do Post / Gancho Viral",
-    "description": "Breve explicação da estratégia deste post",
-    "recommendedStyle": "comparison",
+    "id": "var_1",
+    "title": "Variação 1: Curta (3 Slides) - De Prestador Refém a Criador Escalonável",
+    "description": "Storytelling de Transformação • Meio/Fundo de Funil",
+    "recommendedStyle": "twitter",
+    "recommendedSlideCount": 3,
+    "slidesContent": [
+      { "title": "Gancho", "bodyText": "Conheça o Lucas..." },
+      { "title": "A Virada", "bodyText": "Ele percebeu..." },
+      { "title": "O Processo", "bodyText": "Ele não precisou..." }
+    ]
+  },
+  {
+    "id": "var_2",
+    "title": "Variação 2: Média (4 Slides) - O Fim do Caçador de Clientes",
+    "description": "Storytelling de Transformação • Meio/Fundo de Funil",
+    "recommendedStyle": "news_article",
     "recommendedSlideCount": 4,
     "slidesContent": [
-      { "title": "Capa", "bodyText": "Texto chamativo da capa do slide 1" },
-      { "title": "Slide 2", "bodyText": "Conteúdo do slide 2" },
-      { "title": "Slide 3", "bodyText": "Conteúdo do slide 3" },
-      { "title": "Chamada", "bodyText": "CTA final" }
+      { "title": "Gancho", "bodyText": "A transição silenciosa..." },
+      { "title": "A Realidade", "bodyText": "A maioria passa o mês..." },
+      { "title": "Ação Intencional", "bodyText": "A virada de chave..." },
+      { "title": "A Máquina Rodando", "bodyText": "Você agenda um mês..." }
     ]
   }
 ]
 \`\`\`
-Estilos válidos: "comparison" (comparativo de 2 fotos), "news_article" (notícia/artigo), "immersive" (frase imersiva/citação), "twitter" (estilo post de rede social).
+Estilos válidos: "twitter", "news_article", "immersive", "comparison".
 `;
 
     // Se o usuário definiu um prompt customizado no perfil, utiliza ele com a injeção do contexto do negócio
     const systemPrompt = businessProfile?.customSystemPrompt && businessProfile.customSystemPrompt.trim() !== ''
-      ? `${businessProfile.customSystemPrompt}\n\nCONTEXTO DO NEGÓCIO:\n- Nome: ${userProfile?.name}\n- Nicho: ${businessProfile.niche}\n- Método: ${businessProfile.methodOrToolName}\n\nREGRA TÉCNICA DE AGENDAMENTO:\nSempre que entregar um plano final de posts, inclua no final o bloco \`\`\`json_plan [...] \`\`\` com a lista de posts.`
+      ? `${businessProfile.customSystemPrompt}\n\nCONTEXTO DO NEGÓCIO:\n- Nome: ${userProfile?.name}\n- Nicho: ${businessProfile.niche}\n- Método: ${businessProfile.methodOrToolName}\n\nREGRA TÉCNICA DE AGENDAMENTO:\nSempre que entregar sugestões de posts, inclua no final o bloco \`\`\`json_plan [...] \`\`\` com a lista de posts.`
       : defaultSystemPrompt;
 
 
@@ -103,7 +125,7 @@ Estilos válidos: "comparison" (comparativo de 2 fotos), "news_article" (notíci
         generationConfig: {
           temperature: 0.7,
           topP: 0.95,
-          maxOutputTokens: 2048,
+          maxOutputTokens: 8192,
         },
       }),
     });
@@ -124,7 +146,7 @@ Estilos válidos: "comparison" (comparativo de 2 fotos), "news_article" (notíci
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           contents: fallbackContents,
-          generationConfig: { temperature: 0.7, topP: 0.95, maxOutputTokens: 2048 },
+          generationConfig: { temperature: 0.7, topP: 0.95, maxOutputTokens: 8192 },
         }),
       });
 
@@ -141,7 +163,7 @@ Estilos válidos: "comparison" (comparativo de 2 fotos), "news_article" (notíci
       const fallbackText = fallbackData.candidates?.[0]?.content?.parts?.[0]?.text || 'Sem resposta.';
 
       let fallbackExtractedPlan = null;
-      const jsonMatch = fallbackText.match(/```json_plan\s*([\s\S]*?)\s*```/);
+      const jsonMatch = fallbackText.match(/```(?:json_plan|json)?\s*(\[\s*\{[\s\S]*?\}\s*\])\s*```/);
       if (jsonMatch && jsonMatch[1]) {
         try {
           fallbackExtractedPlan = JSON.parse(jsonMatch[1]);
@@ -150,7 +172,7 @@ Estilos válidos: "comparison" (comparativo de 2 fotos), "news_article" (notíci
 
       return NextResponse.json({
         role: 'assistant',
-        content: fallbackText.replace(/```json_plan[\s\S]*?```/g, '').trim(),
+        content: fallbackText.replace(/```(?:json_plan|json)?\s*\[\s*\{[\s\S]*?\}\s*\]\s*```/g, '').trim(),
         extractedPlan: fallbackExtractedPlan,
       });
     }
@@ -158,9 +180,9 @@ Estilos válidos: "comparison" (comparativo de 2 fotos), "news_article" (notíci
     const data = await geminiResponse.json();
     const candidateText = data.candidates?.[0]?.content?.parts?.[0]?.text || 'Desculpe, não consegui gerar uma resposta. Tente novamente.';
 
-    // Extrair plano JSON se a IA enviou json_plan
+    // Extrair plano JSON se a IA enviou json_plan ou json com array
     let extractedPlan = null;
-    const jsonMatch = candidateText.match(/```json_plan\s*([\s\S]*?)\s*```/);
+    const jsonMatch = candidateText.match(/```(?:json_plan|json)?\s*(\[\s*\{[\s\S]*?\}\s*\])\s*```/);
     if (jsonMatch && jsonMatch[1]) {
       try {
         extractedPlan = JSON.parse(jsonMatch[1]);
@@ -171,7 +193,7 @@ Estilos válidos: "comparison" (comparativo de 2 fotos), "news_article" (notíci
 
     return NextResponse.json({
       role: 'assistant',
-      content: candidateText.replace(/```json_plan[\s\S]*?```/g, '').trim(),
+      content: candidateText.replace(/```(?:json_plan|json)?\s*\[\s*\{[\s\S]*?\}\s*\]\s*```/g, '').trim(),
       extractedPlan: extractedPlan,
     });
   } catch (error: any) {
