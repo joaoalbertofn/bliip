@@ -8,8 +8,10 @@ O **Bliip** é uma plataforma SaaS moderna para criação rápida, edição visu
 
 ### 🤖 Bliip IA Estrategista & Content Planner
 - **Geração Inteligente de Conteúdo**: Criação automática de roteiros de carrossel por IA (Google Gemini API).
-- **Personalização de Perfil de Negócio**: Adaptação de tom de voz, nicho, dores da audiência e métodos específicos do criador.
-- **Funil de Conteúdo Integrado**: Estruturação estratégica de posts para Topo, Meio e Fundo de Funil (Monetização e Atração).
+- **Engenharia Reversa Narrativa & Visual em Tempo Real**:
+  - Leitura dinâmica dos carrosséis salvos pelo próprio criador no estúdio para aprender e clonar o seu tom de voz, estrutura de ganchos, ritmo de slides e frequência de marca-texto (`<mark>`).
+  - Geração de orientações práticas e diretas de **fotos pessoais recomendadas** (`imageDescription`) em cada slot de imagem (ex: *"[Foto recomendada: Print da tela do seu painel de vendas ou foto no computador]"*).
+- **Personalização de Perfil de Negócio Profundo**: Alinhamento com as dores da audiência (*falta de tempo, posts genéricos sem engajamento e sem vendas*) e desejo principal (*criar o mínimo de conteúdo possível no Instagram/YouTube trazendo mais seguidores e vendas*).
 - **Comando de Voz por Microfone (Speech-to-Text Bilíngue)**: Suporte a ditado por voz no chat com alternância rápida entre Português (`pt-BR`) e Inglês (`en-US`), com transcrição contínua acumulativa.
 - **Padronização Visual Otimizada**: Posts e variações recomendadas no estilo visual **Twitter/X** por padrão para melhor aproveitamento do espaço em tela.
 - **Vínculo Dinâmico Chat ↔ Estúdio**: Preservação das edições feitas no estúdio quando o conteúdo é acessado pelo chat do planejador ou calendário.
@@ -17,7 +19,7 @@ O **Bliip** é uma plataforma SaaS moderna para criação rápida, edição visu
 ### 🎨 Editor Visual de Carrosséis & Estilos
 - **Formatos e Layouts Especiais**: Suporte a layouts Twitter/X Style, Immersive, Comparison e News Article.
 - **Temas Visuais & Paletas**: Temas predefinidos (Bruno Perini, Dark Minimal, High Contrast, Gradient, Vibrant Light, etc.).
-- **Marca-Texto Fluido & Inteligente**: Formatação de destaques (`<mark>`) em linha sem blocos quadrados, tratamento inteligente do Enter dentro da marcação e remoção automática de tags vazias.
+- **Marca-Texto Fluido, Purificado & Inteligente**: Formatação de destaques (`<mark>`) semânticos em linha sem blocos quadrados, sanitização defensiva contra vazamento de atributos Tailwind e remoção automática de tags vazias.
 - **Controles de Imagem, Zoom & Ações Flutuantes**:
   - Menu flutuante posicionado no topo externo da foto ao selecioná-la.
   - Zoom preciso (100% a 300%) com trava mínima em 1.0x para evitar bordas vazias.
@@ -140,7 +142,7 @@ src/
 │   └── templates/        # Renderizadores visuais dos modelos de slides
 ├── domain/               # Regras de negócio puras (validações de legenda, slide e carrossel)
 ├── hooks/                # Custom React Hooks (useCarouselState, useSpeechRecognition)
-├── lib/                  # Utilitários, storage (IndexedDB), exportadores e adaptadores de publicação
+├── lib/                  # Utilitários, storage (IndexedDB), contextExtractor, exportadores e adaptadores de publicação
 ├── templates/            # Schemas e registros de modelos de slide
 └── types/                # Definições de tipos TypeScript do domínio
 ```

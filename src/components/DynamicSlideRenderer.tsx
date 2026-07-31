@@ -44,9 +44,11 @@ export const DynamicSlideRenderer: React.FC<DynamicSlideRendererProps> = ({
 
     // Formatar tags <mark> em linha fluida sem blocos quadrados e sem destacar linhas vazias
     formatted = formatted.replace(
-      /<mark(?:\s+class="[^"]*")?>([\s\S]*?)<\/mark>/gi,
+      /<mark[^>]*>([\s\S]*?)<\/mark>/gi,
       (match, innerText) => {
-        let cleanInner = innerText.replace(/<\/?(div|p)[^>]*>/gi, '');
+        let cleanInner = innerText
+          .replace(/^["'\s]*(?:bg-[a-z0-9-]+|text-[a-z0-9-]+|px-\d+|rounded|font-[a-z]+|inline|\[box-decoration-break:clone\]|\[-webkit-box-decoration-break:clone\]|class=)*["'\s>]*/gi, '')
+          .replace(/<\/?(div|p)[^>]*>/gi, '');
         const textOnly = cleanInner.replace(/<[^>]*>/g, '').trim();
         if (!textOnly) {
           return cleanInner;

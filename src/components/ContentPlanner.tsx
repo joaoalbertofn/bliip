@@ -27,7 +27,9 @@ import {
   AlertCircle,
   Mic,
   MicOff,
+  Camera,
 } from 'lucide-react';
+import { extractUserContentContext } from '@/lib/contextExtractor';
 import { useSpeechRecognition } from '@/hooks/useSpeechRecognition';
 
 
@@ -402,6 +404,8 @@ Como posso te ajudar hoje? Solicite sugestões de conteúdo e você poderá **ar
     setIsLoading(true);
 
     try {
+      const userContentContext = extractUserContentContext(carousels, profile);
+
       const response = await fetch('/api/ai/planner', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -409,6 +413,7 @@ Como posso te ajudar hoje? Solicite sugestões de conteúdo e você poderá **ar
           messages: updatedMessages.map((m) => ({ role: m.role, content: m.content })),
           businessProfile: profile.businessProfile,
           userProfile: profile,
+          userContentContext,
           apiKey,
         }),
       });
@@ -1180,14 +1185,25 @@ Como posso te ajudar hoje? Solicite sugestões de conteúdo e você poderá **ar
             </div>
 
             {/* Rodapé: Paginação e Dica */}
-            <div className="w-full flex items-center justify-between border-t border-slate-800 pt-3 text-xs text-slate-400">
-              <span className="font-mono text-purple-300 bg-purple-950/80 px-2.5 py-1 rounded-lg border border-purple-800 font-bold">
-                Slide {previewSlideIdx + 1} de {previewIdea.slides.length}
-              </span>
+            <div className="w-full flex flex-col gap-2 border-t border-slate-800 pt-3 text-xs text-slate-400">
+              {previewIdea.idea.slidesContent?.[previewSlideIdx]?.imageDescription && (
+                <div className="w-full bg-slate-900/90 border border-indigo-500/60 p-2.5 rounded-xl text-xs text-indigo-200 flex items-center gap-2 shadow-lg animate-in fade-in duration-200">
+                  <Camera className="w-4 h-4 text-indigo-400 shrink-0" />
+                  <span className="font-semibold leading-tight">
+                    {previewIdea.idea.slidesContent[previewSlideIdx].imageDescription}
+                  </span>
+                </div>
+              )}
 
-              <span className="text-[11px] text-slate-400 font-mono">
-                Navegue com ← e → • Clique fora ou ESC para fechar
-              </span>
+              <div className="w-full flex items-center justify-between">
+                <span className="font-mono text-purple-300 bg-purple-950/80 px-2.5 py-1 rounded-lg border border-purple-800 font-bold">
+                  Slide {previewSlideIdx + 1} de {previewIdea.slides.length}
+                </span>
+
+                <span className="text-[11px] text-slate-400 font-mono">
+                  Navegue com ← e → • Clique fora ou ESC para fechar
+                </span>
+              </div>
             </div>
           </div>
         </div>

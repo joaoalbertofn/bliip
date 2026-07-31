@@ -293,10 +293,12 @@ export function createSlideFromTemplate(templateId: string): Slide {
 // Utilitário para formatar texto de slide de forma inteligente (Estilo Referência: Pílula topo, Negrito nas palavras e Marca-texto no desfecho)
 export function formatSmartSlideText(rawText: string, slideTitle?: string): string {
   if (!rawText) return '';
-  let text = rawText.trim();
+  let text = rawText.trim()
+    .replace(/<mark[^>]*>/gi, '<mark>')
+    .replace(/["'\s]*(?:bg-[a-z0-9-]+|text-[a-z0-9-]+|px-\d+|rounded|font-[a-z]+|inline|\[box-decoration-break:clone\]|\[-webkit-box-decoration-break:clone\]|class=)+["'\s>]*/gi, '');
 
-  // Se já tiver marcações <mark> manuais ou **negrito**, faz apenas limpeza básica
-  if (text.includes('<mark>') && text.includes('**')) {
+  // Se já tiver marcações <mark> ou **negrito**, retorna o texto sanitizado
+  if (text.includes('<mark>') || text.includes('**')) {
     return text;
   }
 

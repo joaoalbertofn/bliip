@@ -68,13 +68,20 @@ export function sanitizeUserProfile(data: any): UserProfile {
   };
 }
 
+function cleanMarkString(str: string): string {
+  if (!str || typeof str !== 'string') return '';
+  return str
+    .replace(/<mark[^>]*>/gi, '<mark>')
+    .replace(/["'\s]*(?:bg-[a-z0-9-]+|text-[a-z0-9-]+|px-\d+|rounded|font-[a-z]+|inline|\[box-decoration-break:clone\]|\[-webkit-box-decoration-break:clone\]|class=)+["'\s>]*/gi, '');
+}
+
 // Sanitizador defensivo de Slide
 export function sanitizeSlide(s: any): Slide {
   const contentType: ContentType = 
-    s?.contentType === 'text_only' || s?.contentType === 'text_1_image' || s?.contentType === 'text_2_images'
-      ? s.contentType
-      : s?.layout === 'text_only' || s?.layout === 'text_1_image' || s?.layout === 'text_2_images'
-      ? s.layout
+    s?.contentType === 'text_only' || s?.type === 'text_only'
+      ? 'text_only'
+      : s?.contentType === 'text_2_images' || s?.type === 'text_2_images'
+      ? 'text_2_images'
       : 'text_1_image';
 
   const layoutStyle: LayoutStyle = 
@@ -108,7 +115,12 @@ export function sanitizeSlide(s: any): Slide {
     titleAlignment: s?.titleAlignment === 'center' || s?.titleAlignment === 'right' ? s.titleAlignment : 'left',
     background: typeof s?.background === 'string' && s.background ? s.background : '#ffffff',
     layers: {
-      text: Array.isArray(s?.layers?.text) ? s.layers.text : [],
+      text: Array.isArray(s?.layers?.text)
+        ? s.layers.text.map((t: any) => ({
+            ...t,
+            content: cleanMarkString(t?.content),
+          }))
+        : [],
       images,
     },
   };
@@ -332,15 +344,28 @@ const CHAT_HISTORY_KEY = 'bliip_chat_history_v1';
 
 export async function loadPlannedContentIdeas(): Promise<PlannedContentIdea[]> {
   if (typeof window === 'undefined') return [];
+  let raw: any[] = [];
   try {
     const val = await get<any>(PLANNED_CONTENT_KEY);
-    if (Array.isArray(val)) return val;
-    const localVal = localStorage.getItem(PLANNED_CONTENT_KEY);
-    if (localVal) return JSON.parse(localVal);
+    if (Array.isArray(val)) raw = val;
+    else {
+      const localVal = localStorage.getItem(PLANNED_CONTENT_KEY);
+      if (localVal) raw = JSON.parse(localVal);
+    }
   } catch (e) {
     console.warn('Erro ao carregar ideias de conteúdo planejadas:', e);
   }
-  return [];
+
+  return raw.map((idea) => ({
+    ...idea,
+    slidesContent: Array.isArray(idea.slidesContent)
+      ? idea.slidesContent.map((sc: any) => ({
+          ...sc,
+          bodyText: cleanMarkString(sc.bodyText),
+        }))
+      : [],
+    caption: cleanMarkString(idea.caption),
+  }));
 }
 
 export async function savePlannedContentIdeas(ideas: PlannedContentIdea[]): Promise<void> {

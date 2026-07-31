@@ -20,8 +20,11 @@ export const HighlightTextEditor: React.FC<HighlightTextEditorProps> = ({
   // Sincronizar o valor externo de HTML com o editor quando mudar de slide ou resetar
   useEffect(() => {
     if (editorRef.current && !isInternalChangeRef.current) {
-      if (editorRef.current.innerHTML !== value) {
-        editorRef.current.innerHTML = value || '';
+      let cleanVal = (value || '')
+        .replace(/<mark(?:\s+[^>]+)?>/gi, '<mark>')
+        .replace(/["'\s]*(?:bg-[a-z0-9-]+|text-[a-z0-9-]+|px-\d+|rounded|font-[a-z]+|inline|\[box-decoration-break:clone\]|\[-webkit-box-decoration-break:clone\]|class=)+["'\s>]*/gi, '');
+      if (editorRef.current.innerHTML !== cleanVal) {
+        editorRef.current.innerHTML = cleanVal;
       }
     }
   }, [value]);
@@ -45,14 +48,16 @@ export const HighlightTextEditor: React.FC<HighlightTextEditorProps> = ({
     if (!editorRef.current) return;
     cleanEmptyMarks();
     isInternalChangeRef.current = true;
-    const html = editorRef.current.innerHTML;
+    let html = editorRef.current.innerHTML
+      .replace(/<mark(?:\s+[^>]+)?>/gi, '<mark>')
+      .replace(/["'\s]*(?:bg-[a-z0-9-]+|text-[a-z0-9-]+|px-\d+|rounded|font-[a-z]+|inline|\[box-decoration-break:clone\]|\[-webkit-box-decoration-break:clone\]|class=)+["'\s>]*/gi, '');
     onChange(html);
     setTimeout(() => {
       isInternalChangeRef.current = false;
     }, 50);
   };
 
-  // Aplica o elemento <mark> de marca-texto amarelo visualmente na seleção
+  // Aplica a marcação amarela (marca-texto) no texto selecionado
   const applyHighlight = () => {
     const editor = editorRef.current;
     if (!editor) return;
@@ -76,8 +81,8 @@ export const HighlightTextEditor: React.FC<HighlightTextEditorProps> = ({
     // Remover tags de bloco (div, p) para impedir a criação de caixas de bloco retangulares
     selectedContent = selectedContent.replace(/<\/?(div|p)[^>]*>/gi, '');
 
-    // Inserir elemento <mark> estilizado sem expor tags de código brutas
-    const markHtml = `<mark class="bg-yellow-300 text-slate-950 px-1 rounded font-medium inline [box-decoration-break:clone] [-webkit-box-decoration-break:clone]">${selectedContent}</mark>`;
+    // Inserir elemento <mark> limpo sem classes brutas
+    const markHtml = `<mark>${selectedContent}</mark>`;
     document.execCommand('insertHTML', false, markHtml);
     handleInput();
   };

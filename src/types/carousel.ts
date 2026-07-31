@@ -102,7 +102,8 @@ export type PlannedContentIdea = {
   description: string;
   recommendedStyle: LayoutStyle;
   recommendedSlideCount: number;
-  slidesContent?: { title?: string; bodyText: string }[];
+  slidesContent?: { title?: string; bodyText: string; imageDescription?: string; contentType?: ContentType }[];
+  caption?: string;
   status: 'planned' | 'created';
   carouselId?: string;
 };
