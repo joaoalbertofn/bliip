@@ -76,7 +76,7 @@ FORMATO DO BLOCO JSON_PLAN:
     "id": "var_2",
     "title": "Variação 2: Média (4 Slides) - O Fim do Caçador de Clientes",
     "description": "Storytelling de Transformação • Meio/Fundo de Funil",
-    "recommendedStyle": "news_article",
+    "recommendedStyle": "twitter",
     "recommendedSlideCount": 4,
     "slidesContent": [
       { "title": "Gancho", "bodyText": "A transição silenciosa..." },
@@ -87,7 +87,7 @@ FORMATO DO BLOCO JSON_PLAN:
   }
 ]
 \`\`\`
-Estilos válidos: "twitter", "news_article", "immersive", "comparison".
+Estilos válidos: "twitter" (padrão principal para melhor aproveitamento da tela), "comparison", "news_article", "immersive". Sempre use "twitter" como estilo visual padrão dos posts.
 `;
 
     // Se o usuário definiu um prompt customizado no perfil, utiliza ele com a injeção do contexto do negócio

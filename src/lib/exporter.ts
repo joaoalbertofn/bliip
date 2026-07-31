@@ -3,17 +3,20 @@ import JSZip from 'jszip';
 import { Carousel, IntegrationConfig, UserProfile } from '@/types/carousel';
 
 export async function exportElementToPng(element: HTMLElement, filename: string): Promise<string> {
-  // Configurações para garantir captura de alta qualidade 1080x1350 em 2x pixel ratio
+  // Configurações para captura em Ultra Alta Definição (1380x1725px em 3x pixel ratio)
+  // Garante nitidez máxima das letras em telas Retina/Instagram 4K sem qualquer desfoque
   const dataUrl = await toPng(element, {
-    quality: 0.95,
-    pixelRatio: 2,
+    quality: 1.0,
+    pixelRatio: 3, // 460x575 @ 3x = 1380x1725px (Supera o 1080x1350 nativo do Instagram)
     cacheBust: true,
     style: {
       transform: 'scale(1)',
       transformOrigin: 'top left',
       opacity: '1',
       visibility: 'visible',
-    }
+      fontSmoothing: 'antialiased',
+      textRendering: 'optimizeLegibility',
+    } as any
   });
 
   return dataUrl;

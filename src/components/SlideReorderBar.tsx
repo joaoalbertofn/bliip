@@ -175,65 +175,80 @@ export const SlideReorderBar: React.FC<SlideReorderBarProps> = ({
                     : 'border-slate-800 bg-slate-900/80 hover:border-slate-700 hover:bg-slate-850'
                 } ${draggedIdx === idx ? 'opacity-40 scale-95 border-dashed border-indigo-400' : ''}`}
               >
-                {/* Menu de 3 Pontinhos no canto superior direito */}
-                <div className="absolute top-1.5 right-1.5 z-20">
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      setActiveMenuSlideId(activeMenuSlideId === slide.id ? null : slide.id);
-                    }}
-                    className="p-1 rounded-md bg-slate-800/90 hover:bg-slate-700 text-slate-300 hover:text-white transition border border-slate-700/80 shadow"
-                    title="Opções do Slide"
-                  >
-                    <MoreVertical className="w-3 h-3" />
-                  </button>
-
-                  {/* Popover do Menu de 3 Pontinhos */}
-                  {activeMenuSlideId === slide.id && (
-                    <div
-                      onClick={(e) => e.stopPropagation()}
-                      className="absolute right-0 top-6 w-36 bg-slate-900 border border-slate-700 rounded-xl shadow-2xl p-1 z-30 flex flex-col gap-0.5 animate-in fade-in zoom-in-95 duration-100"
+                {/* Botão Direto de Excluir + Menu de 3 Pontinhos no canto superior direito */}
+                <div className="absolute top-1.5 right-1.5 z-20 flex items-center gap-1">
+                  {slides.length > 1 && (
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setConfirmDeleteIdx(idx);
+                      }}
+                      className="p-1 rounded-md bg-slate-800/90 hover:bg-rose-950/80 text-slate-400 hover:text-rose-400 transition border border-slate-700/80 hover:border-rose-800/80 shadow active:scale-95"
+                      title="Excluir este slide"
                     >
-                      <button
-                        onClick={() => {
-                          onDuplicateSlide(idx);
-                          setActiveMenuSlideId(null);
-                        }}
-                        className="w-full px-2.5 py-1.5 text-[11px] font-semibold text-slate-200 hover:bg-slate-800 rounded-lg flex items-center gap-2 transition text-left"
-                      >
-                        <Copy className="w-3.5 h-3.5 text-indigo-400" />
-                        <span>Duplicar</span>
-                      </button>
+                      <Trash2 className="w-3 h-3" />
+                    </button>
+                  )}
 
-                      <button
-                        onClick={() => {
-                          onOpenSaveTemplateModal?.(slide);
-                          setActiveMenuSlideId(null);
-                        }}
-                        className="w-full px-2.5 py-1.5 text-[11px] font-semibold text-slate-200 hover:bg-slate-800 rounded-lg flex items-center gap-2 transition text-left"
-                      >
-                        <Star className="w-3.5 h-3.5 text-amber-400" />
-                        <span>Salvar Modelo</span>
-                      </button>
+                  <div className="relative">
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setActiveMenuSlideId(activeMenuSlideId === slide.id ? null : slide.id);
+                      }}
+                      className="p-1 rounded-md bg-slate-800/90 hover:bg-slate-700 text-slate-300 hover:text-white transition border border-slate-700/80 shadow active:scale-95"
+                      title="Opções do Slide"
+                    >
+                      <MoreVertical className="w-3 h-3" />
+                    </button>
 
-                      {slides.length > 1 && (
+                    {/* Popover do Menu de 3 Pontinhos */}
+                    {activeMenuSlideId === slide.id && (
+                      <div
+                        onClick={(e) => e.stopPropagation()}
+                        className="absolute right-0 top-6 w-36 bg-slate-900 border border-slate-700 rounded-xl shadow-2xl p-1 z-30 flex flex-col gap-0.5 animate-in fade-in zoom-in-95 duration-100"
+                      >
                         <button
                           onClick={() => {
-                            setConfirmDeleteIdx(idx);
+                            onDuplicateSlide(idx);
                             setActiveMenuSlideId(null);
                           }}
-                          className="w-full px-2.5 py-1.5 text-[11px] font-semibold text-red-400 hover:bg-red-950/60 rounded-lg flex items-center gap-2 transition text-left"
+                          className="w-full px-2.5 py-1.5 text-[11px] font-semibold text-slate-200 hover:bg-slate-800 rounded-lg flex items-center gap-2 transition text-left"
                         >
-                          <Trash2 className="w-3.5 h-3.5" />
-                          <span>Excluir</span>
+                          <Copy className="w-3.5 h-3.5 text-indigo-400" />
+                          <span>Duplicar</span>
                         </button>
-                      )}
-                    </div>
-                  )}
+
+                        <button
+                          onClick={() => {
+                            onOpenSaveTemplateModal?.(slide);
+                            setActiveMenuSlideId(null);
+                          }}
+                          className="w-full px-2.5 py-1.5 text-[11px] font-semibold text-slate-200 hover:bg-slate-800 rounded-lg flex items-center gap-2 transition text-left"
+                        >
+                          <Star className="w-3.5 h-3.5 text-amber-400" />
+                          <span>Salvar Modelo</span>
+                        </button>
+
+                        {slides.length > 1 && (
+                          <button
+                            onClick={() => {
+                              setConfirmDeleteIdx(idx);
+                              setActiveMenuSlideId(null);
+                            }}
+                            className="w-full px-2.5 py-1.5 text-[11px] font-semibold text-red-400 hover:bg-red-950/60 rounded-lg flex items-center gap-2 transition text-left"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                            <span>Excluir</span>
+                          </button>
+                        )}
+                      </div>
+                    )}
+                  </div>
                 </div>
 
                 {/* Header do Card com Número e Drag Handle */}
-                <div className="flex items-center justify-between w-full pr-5">
+                <div className="flex items-center justify-between w-full pr-11">
                   <span
                     className={`text-[9px] font-bold px-1 py-0.5 rounded flex items-center gap-0.5 ${
                       isActive ? 'bg-indigo-600 text-white' : 'bg-slate-800 text-slate-400'

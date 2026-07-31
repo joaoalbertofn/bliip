@@ -38,16 +38,39 @@ export const DynamicSlideRenderer: React.FC<DynamicSlideRendererProps> = ({
   const processMarkTags = (htmlText: string) => {
     if (!htmlText) return htmlText;
     let formatted = htmlText;
-    
+
     // Converter markdown bold **texto** para <strong>texto</strong>
     formatted = formatted.replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>');
-    
-    // Formatar tags <mark> com o fundo marca-texto e texto em contraste
+
+    // Formatar tags <mark> em linha fluida sem blocos quadrados e sem destacar linhas vazias
     formatted = formatted.replace(
       /<mark(?:\s+class="[^"]*")?>([\s\S]*?)<\/mark>/gi,
-      `<mark style="background-color: ${theme.markBg}; color: ${theme.markText}; padding: 3px 8px; border-radius: 6px; font-weight: 700; display: inline-block;">$1</mark>`
+      (match, innerText) => {
+        let cleanInner = innerText.replace(/<\/?(div|p)[^>]*>/gi, '');
+        const textOnly = cleanInner.replace(/<[^>]*>/g, '').trim();
+        if (!textOnly) {
+          return cleanInner;
+        }
+
+        let prefixBr = '';
+        let suffixBr = '';
+        cleanInner = cleanInner.replace(/^(?:\s*<br\s*\/?>\s*)+/gi, (m: string) => {
+          prefixBr = m;
+          return '';
+        });
+        cleanInner = cleanInner.replace(/(?:\s*<br\s*\/?>\s*)+$/gi, (m: string) => {
+          suffixBr = m;
+          return '';
+        });
+
+        if (!cleanInner.trim()) {
+          return `${prefixBr}${suffixBr}`;
+        }
+
+        return `${prefixBr}<mark style="background-color: ${theme.markBg}; color: ${theme.markText}; padding: 2px 6px; border-radius: 4px; font-weight: 700; display: inline; -webkit-box-decoration-break: clone; box-decoration-break: clone;">${cleanInner}</mark>${suffixBr}`;
+      }
     );
-    
+
     return formatted;
   };
 

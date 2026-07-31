@@ -23,12 +23,12 @@ export function getMaxImagesForContentType(contentType: ContentType): number {
 
 /**
  * Valida se um tipo de conteúdo é permitido para o estilo de layout atual.
- * - 'comparison': Permite APENAS 'text_2_images'.
- * - Outros estilos ('twitter', 'immersive', 'news_article'): Permite apenas 'text_only' e 'text_1_image'.
+ * - 'twitter': Permite todos os tipos de conteúdo ('text_only', 'text_1_image' e 'text_2_images').
+ * - Outros estilos ('immersive', 'news_article'): Permitem apenas 'text_only' e 'text_1_image'.
  */
 export function isContentTypeAllowed(layoutStyle: LayoutStyle, targetContentType: ContentType): boolean {
-  if (layoutStyle === 'comparison') {
-    return targetContentType === 'text_2_images';
+  if (layoutStyle === 'twitter' || (layoutStyle as any) === 'comparison') {
+    return true;
   }
   return targetContentType !== 'text_2_images';
 }
@@ -39,10 +39,10 @@ export function canChangeContentType(layoutStyle: LayoutStyle, targetContentType
 
 /**
  * Valida se o seletor de orientação das imagens (Horizontal vs Vertical) deve ficar ativo.
- * Ativo apenas para o estilo 'comparison' ou quando o conteúdo tiver 2 imagens ('text_2_images').
+ * Ativo quando o conteúdo tiver 2 imagens ('text_2_images').
  */
 export function canChangeOrientation(layoutStyle: LayoutStyle, contentType: ContentType): boolean {
-  return layoutStyle === 'comparison' || contentType === 'text_2_images';
+  return contentType === 'text_2_images' || (layoutStyle as any) === 'comparison';
 }
 
 /**

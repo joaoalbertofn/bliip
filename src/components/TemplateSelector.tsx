@@ -37,7 +37,6 @@ export const TemplateSelector: React.FC<TemplateSelectorProps> = ({
     switch (id) {
       case 'twitter': return 'Twitter';
       case 'immersive': return 'Imersivo';
-      case 'comparison': return 'Comparativo';
       case 'news_article': return 'Notícias';
       default: return 'Estilo';
     }
@@ -70,8 +69,6 @@ export const TemplateSelector: React.FC<TemplateSelectorProps> = ({
                   <span className="text-xs font-bold text-slate-100 flex items-center gap-1.5 truncate">
                     {style.id === 'twitter' ? (
                       <Twitter className="w-3.5 h-3.5 text-sky-400 shrink-0" />
-                    ) : style.id === 'comparison' ? (
-                      <Layers className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
                     ) : style.id === 'news_article' ? (
                       <FileText className="w-3.5 h-3.5 text-amber-400 shrink-0" />
                     ) : (

@@ -39,22 +39,22 @@ export const LAYOUT_STYLES: Record<LayoutStyle, LayoutStyleDefinition> = {
   twitter: {
     id: 'twitter',
     name: 'Twitter',
-    description: 'Fundo claro com cabeçalho de perfil, selo azul e visual de post de rede social.',
+    description: 'Fundo claro com cabeçalho de perfil, selo azul e suporte a texto, 1 ou 2 imagens.',
   },
   immersive: {
     id: 'immersive',
     name: 'Immersive',
     description: 'Imagens ou fundo em tela cheia, círculo de perfil badge e tipografia marcante.',
   },
-  comparison: {
-    id: 'comparison',
-    name: 'Comparativo',
-    description: 'Ideal para comparações (Antes/Depois ou Primeiro/Depois) com rótulos de fotos.',
-  },
   news_article: {
     id: 'news_article',
     name: 'Notícia',
     description: 'Visual editorial estilo manchete de notícias de mercado com destaques.',
+  },
+  comparison: {
+    id: 'comparison',
+    name: 'Comparativo',
+    description: 'Ideal para comparações (Antes/Depois ou Primeiro/Depois) com rótulos de fotos.',
   },
 };
 

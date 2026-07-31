@@ -23,7 +23,7 @@ export type ImageLayer = {
 };
 
 export type ContentType = "text_only" | "text_1_image" | "text_2_images";
-export type LayoutStyle = "twitter" | "immersive" | "comparison" | "news_article";
+export type LayoutStyle = "twitter" | "immersive" | "news_article" | "comparison";
 
 export type SlideStyleData = {
   contentType: ContentType;

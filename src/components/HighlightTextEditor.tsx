@@ -26,8 +26,24 @@ export const HighlightTextEditor: React.FC<HighlightTextEditorProps> = ({
     }
   }, [value]);
 
+  // Remove tags <mark> sem conteúdo de texto visível
+  const cleanEmptyMarks = () => {
+    if (!editorRef.current) return;
+    const marks = editorRef.current.querySelectorAll('mark');
+    marks.forEach((mark) => {
+      const textContent = mark.textContent || '';
+      if (!textContent.trim()) {
+        while (mark.firstChild) {
+          mark.parentNode?.insertBefore(mark.firstChild, mark);
+        }
+        mark.parentNode?.removeChild(mark);
+      }
+    });
+  };
+
   const handleInput = () => {
     if (!editorRef.current) return;
+    cleanEmptyMarks();
     isInternalChangeRef.current = true;
     const html = editorRef.current.innerHTML;
     onChange(html);
@@ -55,10 +71,13 @@ export const HighlightTextEditor: React.FC<HighlightTextEditorProps> = ({
 
     const container = document.createElement('div');
     container.appendChild(range.cloneContents());
-    const selectedContent = container.innerHTML;
+    let selectedContent = container.innerHTML;
+
+    // Remover tags de bloco (div, p) para impedir a criação de caixas de bloco retangulares
+    selectedContent = selectedContent.replace(/<\/?(div|p)[^>]*>/gi, '');
 
     // Inserir elemento <mark> estilizado sem expor tags de código brutas
-    const markHtml = `<mark class="bg-yellow-300 text-slate-950 px-1 rounded font-medium">${selectedContent}</mark>`;
+    const markHtml = `<mark class="bg-yellow-300 text-slate-950 px-1 rounded font-medium inline [box-decoration-break:clone] [-webkit-box-decoration-break:clone]">${selectedContent}</mark>`;
     document.execCommand('insertHTML', false, markHtml);
     handleInput();
   };
@@ -83,11 +102,119 @@ export const HighlightTextEditor: React.FC<HighlightTextEditorProps> = ({
     onChange(cleanText);
   };
 
-  // Trata Enter como quebra de linha limpa
+  // Trata Enter de forma inteligente com marca-texto
   const handleKeyDown = (e: React.KeyboardEvent<HTMLDivElement>) => {
     if (e.key === 'Enter') {
-      document.execCommand('insertLineBreak');
       e.preventDefault();
+
+      const selection = window.getSelection();
+      if (!selection || selection.rangeCount === 0) {
+        document.execCommand('insertLineBreak');
+        handleInput();
+        return;
+      }
+
+      const range = selection.getRangeAt(0);
+
+      // Se houver texto selecionado, apaga antes de dar o enter
+      if (!range.collapsed) {
+        range.deleteContents();
+      }
+
+      // Verificar se o cursor está dentro de uma tag <mark>
+      let markNode: HTMLElement | null = null;
+      let curr: Node | null = range.startContainer;
+      while (curr && curr !== editorRef.current) {
+        if (curr.nodeType === Node.ELEMENT_NODE && (curr as HTMLElement).tagName.toLowerCase() === 'mark') {
+          markNode = curr as HTMLElement;
+          break;
+        }
+        curr = curr.parentNode;
+      }
+
+      if (!markNode) {
+        // Se não está em um marca-texto, insere quebra de linha padrão
+        const br = document.createElement('br');
+        range.insertNode(br);
+        range.setStartAfter(br);
+        range.collapse(true);
+        selection.removeAllRanges();
+        selection.addRange(range);
+        handleInput();
+        return;
+      }
+
+      // Cursor está DENTRO do marca-texto
+      const preRange = document.createRange();
+      preRange.setStart(markNode, 0);
+      preRange.setEnd(range.startContainer, range.startOffset);
+      const textBefore = preRange.toString().replace(/\s+/g, '');
+
+      const postRange = document.createRange();
+      postRange.setStart(range.endContainer, range.endOffset);
+      postRange.setEnd(markNode, markNode.childNodes.length);
+      const textAfter = postRange.toString().replace(/\s+/g, '');
+
+      const isAtStart = textBefore === '';
+      const isAtEnd = textAfter === '';
+
+      if (isAtStart) {
+        // CASO 1: Enter no INÍCIO da marcação
+        // Insere <br> ANTES do <mark> para descer todo o bloco sem deixar resquício no topo
+        const br = document.createElement('br');
+        markNode.parentNode?.insertBefore(br, markNode);
+
+        const newRange = document.createRange();
+        newRange.setStart(markNode, 0);
+        newRange.collapse(true);
+        selection.removeAllRanges();
+        selection.addRange(newRange);
+      } else if (isAtEnd) {
+        // CASO 2: Enter no FINAL da marcação
+        // Insere <br> DEPOIS do <mark>
+        const br = document.createElement('br');
+        if (markNode.nextSibling) {
+          markNode.parentNode?.insertBefore(br, markNode.nextSibling);
+        } else {
+          markNode.parentNode?.appendChild(br);
+        }
+
+        const newRange = document.createRange();
+        if (br.nextSibling && br.nextSibling.nodeType === Node.TEXT_NODE) {
+          newRange.setStart(br.nextSibling, 0);
+        } else {
+          newRange.setStartAfter(br);
+        }
+        newRange.collapse(true);
+        selection.removeAllRanges();
+        selection.addRange(newRange);
+      } else {
+        // CASO 3: Enter no MEIO da marcação
+        // Divide o <mark> em dois <mark>, mantendo destaque em ambas as partes
+        const extractedContent = postRange.extractContents();
+
+        const newMark = document.createElement('mark');
+        newMark.className = markNode.className;
+        newMark.appendChild(extractedContent);
+
+        const br = document.createElement('br');
+
+        if (markNode.nextSibling) {
+          markNode.parentNode?.insertBefore(br, markNode.nextSibling);
+          markNode.parentNode?.insertBefore(newMark, br.nextSibling);
+        } else {
+          markNode.parentNode?.appendChild(br);
+          markNode.parentNode?.appendChild(newMark);
+        }
+
+        const newRange = document.createRange();
+        newRange.setStart(newMark, 0);
+        newRange.collapse(true);
+        selection.removeAllRanges();
+        selection.addRange(newRange);
+      }
+
+      cleanEmptyMarks();
       handleInput();
     }
   };
@@ -142,7 +269,7 @@ export const HighlightTextEditor: React.FC<HighlightTextEditorProps> = ({
           onInput={handleInput}
           onKeyDown={handleKeyDown}
           data-placeholder={placeholder}
-          className="w-full bg-slate-900 border border-slate-700/80 rounded-xl p-3.5 text-slate-100 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 font-sans leading-relaxed overflow-y-auto transition-colors [&:empty]:before:content-[attr(data-placeholder)] [&:empty]:before:text-slate-500 [&:empty]:before:pointer-events-none [&_mark]:bg-yellow-300 [&_mark]:text-slate-950 [&_mark]:font-medium [&_mark]:px-1.5 [&_mark]:py-0.5 [&_mark]:rounded [&_mark]:shadow-sm"
+          className="w-full bg-slate-900 border border-slate-700/80 rounded-xl p-3.5 text-slate-100 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 font-sans leading-relaxed overflow-y-auto transition-colors [&:empty]:before:content-[attr(data-placeholder)] [&:empty]:before:text-slate-500 [&:empty]:before:pointer-events-none [&_mark]:bg-yellow-300 [&_mark]:text-slate-950 [&_mark]:font-medium [&_mark]:px-1.5 [&_mark]:py-0.5 [&_mark]:rounded [&_mark]:shadow-sm [&_mark]:inline [&_mark]:[box-decoration-break:clone] [&_mark]:[-webkit-box-decoration-break:clone]"
           style={{ minHeight: `${rows * 26}px`, maxHeight: '320px' }}
         />
       </div>

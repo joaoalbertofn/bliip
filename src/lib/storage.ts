@@ -29,13 +29,42 @@ export const DEFAULT_USER_PROFILE: UserProfile = {
   avatarUrl: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=250&h=250&q=80',
 };
 
-// Sanitizador defensivo de Perfil do Usuário
+// Helpers de Sincronização Permanente com o Servidor (/api/settings)
+async function syncServerSettings(key: string, data: any) {
+  if (typeof window === 'undefined') return;
+  try {
+    await fetch('/api/settings', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ [key]: data }),
+    });
+  } catch (err) {
+    console.warn(`[Sync Server] Erro ao sincronizar ${key} com o disco:`, err);
+  }
+}
+
+async function fetchServerSetting(key: string) {
+  if (typeof window === 'undefined') return null;
+  try {
+    const res = await fetch('/api/settings');
+    if (res.ok) {
+      const json = await res.json();
+      return json?.settings?.[key] || null;
+    }
+  } catch (err) {
+    console.warn(`[Sync Server] Erro ao buscar ${key} do disco:`, err);
+  }
+  return null;
+}
+
+// Sanitizador defensivo de Perfil do Usuário (Preserva 100% o businessProfile do Quiz)
 export function sanitizeUserProfile(data: any): UserProfile {
   if (!data || typeof data !== 'object') return DEFAULT_USER_PROFILE;
   return {
     name: typeof data.name === 'string' && data.name.trim() !== '' ? data.name : DEFAULT_USER_PROFILE.name,
     handle: typeof data.handle === 'string' ? data.handle : DEFAULT_USER_PROFILE.handle,
     avatarUrl: typeof data.avatarUrl === 'string' && data.avatarUrl.trim() !== '' ? data.avatarUrl : DEFAULT_USER_PROFILE.avatarUrl,
+    businessProfile: data.businessProfile && typeof data.businessProfile === 'object' ? data.businessProfile : undefined,
   };
 }
 
@@ -73,6 +102,8 @@ export function sanitizeSlide(s: any): Slide {
     templateId: typeof s?.templateId === 'string' ? s.templateId : undefined,
     theme: s?.theme,
     title: typeof s?.title === 'string' ? s.title : undefined,
+    newsTitle: typeof s?.newsTitle === 'string' ? s.newsTitle : undefined,
+    imageLabels: Array.isArray(s?.imageLabels) ? s.imageLabels : undefined,
     textAlignment: s?.textAlignment === 'center' || s?.textAlignment === 'right' ? s.textAlignment : 'left',
     titleAlignment: s?.titleAlignment === 'center' || s?.titleAlignment === 'right' ? s.titleAlignment : 'left',
     background: typeof s?.background === 'string' && s.background ? s.background : '#ffffff',
@@ -115,19 +146,40 @@ export function sanitizeIntegrations(config: any): IntegrationConfig {
   };
 }
 
-// Helper com fallback transparente entre IndexedDB e localStorage
+// Helper de Perfil com Fallback Triplo: IndexedDB -> localStorage -> Servidor (/api/settings)
 export async function loadUserProfile(): Promise<UserProfile> {
   if (typeof window === 'undefined') return DEFAULT_USER_PROFILE;
+  let loadedProfile: UserProfile | null = null;
+
   try {
     const val = await get<any>(USER_PROFILE_KEY);
-    if (val) return sanitizeUserProfile(val);
-    
-    const localVal = localStorage.getItem(USER_PROFILE_KEY);
-    if (localVal) return sanitizeUserProfile(JSON.parse(localVal));
+    if (val) loadedProfile = sanitizeUserProfile(val);
+    if (!loadedProfile || !loadedProfile.businessProfile) {
+      const localVal = localStorage.getItem(USER_PROFILE_KEY);
+      if (localVal) loadedProfile = sanitizeUserProfile(JSON.parse(localVal));
+    }
   } catch (e) {
     console.warn('Erro ao carregar perfil do IndexedDB:', e);
   }
-  return DEFAULT_USER_PROFILE;
+
+  // Se não houver perfil local ou se estiver sem o perfil de negócio, recupera backup do disco do servidor
+  if (!loadedProfile || !loadedProfile.businessProfile) {
+    const serverProfile = await fetchServerSetting('userProfile');
+    if (serverProfile) {
+      const sanitizedServer = sanitizeUserProfile(serverProfile);
+      if (sanitizedServer) {
+        loadedProfile = loadedProfile
+          ? { ...loadedProfile, businessProfile: sanitizedServer.businessProfile || loadedProfile.businessProfile }
+          : sanitizedServer;
+
+        // Atualiza armazenamento do navegador
+        await set(USER_PROFILE_KEY, loadedProfile);
+        localStorage.setItem(USER_PROFILE_KEY, JSON.stringify(loadedProfile));
+      }
+    }
+  }
+
+  return loadedProfile || DEFAULT_USER_PROFILE;
 }
 
 export async function saveUserProfile(profile: UserProfile): Promise<void> {
@@ -139,6 +191,8 @@ export async function saveUserProfile(profile: UserProfile): Promise<void> {
     console.warn('Fallback para localStorage ao salvar perfil:', e);
   }
   localStorage.setItem(USER_PROFILE_KEY, JSON.stringify(sanitized));
+  // Sincroniza permanentemente no arquivo settings.json no servidor
+  syncServerSettings('userProfile', sanitized);
 }
 
 export async function loadUserPreferences(): Promise<UserCreationPreferences> {
@@ -161,6 +215,7 @@ export async function saveUserPreferences(prefs: Partial<UserCreationPreferences
     const updated = { ...current, ...prefs };
     await set(USER_PREFERENCES_KEY, updated);
     localStorage.setItem(USER_PREFERENCES_KEY, JSON.stringify(updated));
+    syncServerSettings('userPreferences', updated);
   } catch (e) {
     console.warn('Fallback para localStorage ao salvar preferências:', e);
   }
@@ -198,17 +253,32 @@ export async function saveCarousels(carousels: Carousel[]): Promise<void> {
   }
 }
 
+// Helper de Integrações com Fallback Triplo: IndexedDB -> localStorage -> Servidor (/api/settings)
 export async function loadIntegrations(): Promise<IntegrationConfig> {
   if (typeof window === 'undefined') return { bufferApiKey: '' };
+  let loadedCfg: IntegrationConfig | null = null;
   try {
     const val = await get<any>(INTEGRATIONS_KEY);
-    if (val) return sanitizeIntegrations(val);
-    const localVal = localStorage.getItem(INTEGRATIONS_KEY);
-    if (localVal) return sanitizeIntegrations(JSON.parse(localVal));
+    if (val) loadedCfg = sanitizeIntegrations(val);
+    if (!loadedCfg || !loadedCfg.bufferApiKey) {
+      const localVal = localStorage.getItem(INTEGRATIONS_KEY);
+      if (localVal) loadedCfg = sanitizeIntegrations(JSON.parse(localVal));
+    }
   } catch (e) {
     console.warn('Erro ao carregar integrações:', e);
   }
-  return { bufferApiKey: '' };
+
+  // Se o armazenamento local estiver vazio ou sem chaves, resgata backup permanente do servidor
+  if (!loadedCfg || (!loadedCfg.bufferApiKey && !loadedCfg.apiKey)) {
+    const serverIntegrations = await fetchServerSetting('integrations');
+    if (serverIntegrations) {
+      loadedCfg = sanitizeIntegrations(serverIntegrations);
+      await set(INTEGRATIONS_KEY, loadedCfg);
+      localStorage.setItem(INTEGRATIONS_KEY, JSON.stringify(loadedCfg));
+    }
+  }
+
+  return loadedCfg || { bufferApiKey: '' };
 }
 
 export async function saveIntegrations(config: IntegrationConfig): Promise<void> {
@@ -224,6 +294,8 @@ export async function saveIntegrations(config: IntegrationConfig): Promise<void>
   } catch (err) {
     console.error('Erro ao salvar integrações no localStorage:', err);
   }
+  // Sincroniza permanentemente no disco do servidor
+  syncServerSettings('integrations', sanitized);
 }
 
 const SAVED_TEMPLATES_KEY = 'bliip_saved_slide_templates';
@@ -251,12 +323,11 @@ export async function saveSavedSlideTemplates(templates: SavedSlideTemplate[]): 
   try {
     localStorage.setItem(SAVED_TEMPLATES_KEY, JSON.stringify(templates));
   } catch (err) {
-    console.error('Erro ao salvar modelos no localStorage:', err);
+    console.error('Erro ao salvar modelos de slides no localStorage:', err);
   }
 }
 
 const PLANNED_CONTENT_KEY = 'bliip_planned_content_ideas';
-
 const CHAT_HISTORY_KEY = 'bliip_chat_history_v1';
 
 export async function loadPlannedContentIdeas(): Promise<PlannedContentIdea[]> {

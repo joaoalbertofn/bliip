@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { UserProfile, PlannedContentIdea, Slide } from '@/types/carousel';
+import { UserProfile, PlannedContentIdea, Slide, LayoutStyle, Carousel } from '@/types/carousel';
 import { loadPlannedContentIdeas, savePlannedContentIdeas, loadChatHistory, saveChatHistory } from '@/lib/storage';
 import { createSlide, formatSmartSlideText, detectComparisonLabels } from '@/lib/templates';
 import { SlideCanvas } from './SlideCanvas';
@@ -25,10 +25,15 @@ import {
   GripVertical,
   Move,
   AlertCircle,
+  Mic,
+  MicOff,
 } from 'lucide-react';
+import { useSpeechRecognition } from '@/hooks/useSpeechRecognition';
+
 
 interface ContentPlannerProps {
   profile: UserProfile;
+  carousels?: Carousel[];
   onCreateCarouselFromIdea: (idea: PlannedContentIdea) => void;
   apiKey?: string;
 }
@@ -152,9 +157,17 @@ const getIntroTextOnly = (content: string) => {
   return 'Aqui estão as sugestões de conteúdo e os roteiros dos slides divididos em variações para o seu negócio:';
 };
 
-// Gerador de Slides para a pré-visualização em alta fidelidade no Modal
-const getSlidesForIdea = (idea: PlannedContentIdea, profile: UserProfile): Slide[] => {
-  const style = idea.recommendedStyle || 'twitter';
+// Gerador de Slides para a pré-visualização em alta fidelidade no Modal (Prioriza slides já editados no Studio se existirem)
+const getSlidesForIdea = (idea: PlannedContentIdea, profile: UserProfile, carousels: Carousel[] = []): Slide[] => {
+  if (idea.carouselId) {
+    const existing = carousels.find((c) => c.id === idea.carouselId);
+    if (existing && existing.slides && existing.slides.length > 0) {
+      return existing.slides;
+    }
+  }
+
+  // Padronizar estilo visual 'twitter' por padrão
+  const style = idea.recommendedStyle === 'comparison' ? 'comparison' : 'twitter';
   const slides: Slide[] = [];
 
   const isComparisonTopic =
@@ -169,7 +182,7 @@ const getSlidesForIdea = (idea: PlannedContentIdea, profile: UserProfile): Slide
     idea.slidesContent.forEach((sc, idx) => {
       const isComparisonSlide = isComparisonTopic && (idx === 1 || style === 'comparison');
       const contentType = isComparisonSlide ? 'text_2_images' : 'text_1_image';
-      const slideStyle = isComparisonSlide ? 'comparison' : style;
+      const slideStyle: LayoutStyle = isComparisonSlide ? 'comparison' : 'twitter';
 
       const s = createSlide(contentType, slideStyle);
 
@@ -177,7 +190,7 @@ const getSlidesForIdea = (idea: PlannedContentIdea, profile: UserProfile): Slide
         s.title = sc.title;
       }
 
-      if (slideStyle === 'news_article') {
+      if ((slideStyle as string) === 'news_article') {
         s.newsTitle = sc.title || idea.title || 'ALERTA DE POSICIONAMENTO';
       }
 
@@ -231,6 +244,7 @@ const getSlidesForIdea = (idea: PlannedContentIdea, profile: UserProfile): Slide
 
 export const ContentPlanner: React.FC<ContentPlannerProps> = ({
   profile,
+  carousels = [],
   onCreateCarouselFromIdea,
   apiKey,
 }) => {
@@ -255,11 +269,38 @@ export const ContentPlanner: React.FC<ContentPlannerProps> = ({
   const [previewSlideIdx, setPreviewSlideIdx] = useState<number>(0);
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const baseInputRef = useRef('');
 
   const showToast = (msg: string) => {
     setToastMessage(msg);
     setTimeout(() => setToastMessage(null), 3500);
   };
+
+  // Suporte a Comando de Voz (Web Speech API - PT / EN)
+  const {
+    isListening,
+    isSupported,
+    selectedLang,
+    stopListening,
+    toggleListening,
+    changeLanguage,
+  } = useSpeechRecognition({
+    onResult: (text) => {
+      const prefix = baseInputRef.current ? baseInputRef.current + ' ' : '';
+      setInputMessage(prefix + text);
+    },
+    onError: (err) => {
+      showToast(`[Voz] ${err}`);
+    },
+  });
+
+  const handleToggleMic = () => {
+    if (!isListening) {
+      baseInputRef.current = inputMessage;
+    }
+    toggleListening();
+  };
+
 
   // Suporte a teclas de seta (← e →) no Modal de Pré-visualização e tecla ESC para fechar
   useEffect(() => {
@@ -282,7 +323,7 @@ export const ContentPlanner: React.FC<ContentPlannerProps> = ({
   }, [previewIdea]);
 
   const handleOpenPreview = (idea: PlannedContentIdea) => {
-    const slides = getSlidesForIdea(idea, profile);
+    const slides = getSlidesForIdea(idea, profile, carousels);
     setPreviewIdea({ idea, slides });
     setPreviewSlideIdx(0);
   };
@@ -818,14 +859,25 @@ Como posso te ajudar hoje? Solicite sugestões de conteúdo e você poderá **ar
           <div ref={messagesEndRef} />
         </div>
 
-        {/* Form de Envio com Textarea Multilinha (Shift + Enter para nova linha) */}
+        {/* Form de Envio com Comando de Voz (PT/EN) e Textarea Multilinha */}
         <form
           onSubmit={(e) => {
             e.preventDefault();
+            if (isListening) stopListening();
             handleSendMessage();
           }}
           className="p-3 border-t border-slate-800 bg-slate-900 flex items-end gap-2 shrink-0"
         >
+          {/* Seletor Rápido de Idioma da Voz (PT / EN) */}
+          <button
+            type="button"
+            onClick={() => changeLanguage(selectedLang === 'pt-BR' ? 'en-US' : 'pt-BR')}
+            title={`Idioma atual da voz: ${selectedLang === 'pt-BR' ? 'Português (pt-BR)' : 'Inglês (en-US)'}. Clique para alterar.`}
+            className="h-10 px-2.5 rounded-xl bg-slate-950 hover:bg-slate-800 border border-slate-800 text-slate-300 text-[11px] font-mono font-bold flex items-center gap-1 shrink-0 transition"
+          >
+            <span>{selectedLang === 'pt-BR' ? '🇧🇷 PT' : '🇺🇸 EN'}</span>
+          </button>
+
           <textarea
             rows={1}
             value={inputMessage}
@@ -833,13 +885,45 @@ Como posso te ajudar hoje? Solicite sugestões de conteúdo e você poderá **ar
             onKeyDown={(e) => {
               if (e.key === 'Enter' && !e.shiftKey) {
                 e.preventDefault();
+                if (isListening) stopListening();
                 handleSendMessage();
               }
             }}
-            placeholder="Converse com seu Estrategista IA... (Shift + Enter para quebrar linha)"
+            placeholder={
+              isListening
+                ? `🎙️ Ouvindo em ${selectedLang === 'pt-BR' ? 'Português' : 'Inglês'}... Fale agora.`
+                : "Converse com seu Estrategista IA... (Shift + Enter para quebrar linha)"
+            }
             disabled={isLoading}
-            className="flex-1 bg-slate-950 border border-slate-800 rounded-xl px-4 py-2.5 text-white text-xs focus:outline-none focus:ring-2 focus:ring-purple-500 font-medium resize-none max-h-32 min-h-[42px] scrollbar-thin"
+            className={`flex-1 bg-slate-950 border rounded-xl px-4 py-2.5 text-white text-xs focus:outline-none focus:ring-2 focus:ring-purple-500 font-medium resize-none max-h-32 min-h-[42px] scrollbar-thin transition-all ${
+              isListening
+                ? 'border-red-500/80 ring-2 ring-red-500/30 bg-red-950/10'
+                : 'border-slate-800'
+            }`}
           />
+
+          {/* Botão de Microfone (Digitação por Voz) */}
+          <button
+            type="button"
+            onClick={handleToggleMic}
+            disabled={isLoading || !isSupported}
+            title={
+              !isSupported
+                ? 'Reconhecimento de voz não é suportado neste navegador (use Chrome/Edge/Safari)'
+                : isListening
+                ? 'Clique para parar a gravação de voz'
+                : `Digitar por voz em ${selectedLang === 'pt-BR' ? 'Português (pt-BR)' : 'Inglês (en-US)'}`
+            }
+            className={`w-10 h-10 rounded-xl flex items-center justify-center transition shrink-0 ${
+              isListening
+                ? 'bg-red-600 hover:bg-red-500 text-white animate-pulse shadow-glow border border-red-400'
+                : 'bg-slate-800 hover:bg-slate-700 disabled:opacity-40 text-slate-300 border border-slate-700'
+            }`}
+          >
+            {isListening ? <MicOff className="w-4 h-4" /> : <Mic className="w-4 h-4 text-purple-400" />}
+          </button>
+
+          {/* Botão de Enviar */}
           <button
             type="submit"
             disabled={!inputMessage.trim() || isLoading}
@@ -947,8 +1031,9 @@ Como posso te ajudar hoje? Solicite sugestões de conteúdo e você poderá **ar
                 {hasIdea ? (
                   (() => {
                     const idea = dayIdeas[0];
-                    const totalSlides = idea.recommendedSlideCount || idea.slidesContent?.length || 4;
-                    const coverText = idea.slidesContent?.[0]?.bodyText || idea.description;
+                    const existingCarousel = idea.carouselId ? carousels.find((c) => c.id === idea.carouselId) : null;
+                    const totalSlides = existingCarousel ? existingCarousel.slides.length : (idea.recommendedSlideCount || idea.slidesContent?.length || 4);
+                    const coverText = existingCarousel?.slides?.[0]?.layers?.text?.[0]?.content?.replace(/<[^>]*>/g, '') || idea.slidesContent?.[0]?.bodyText || idea.description;
 
                     return (
                       <div

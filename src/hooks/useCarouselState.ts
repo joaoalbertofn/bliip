@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Carousel, Slide, UserProfile, ImageSource, ContentType, LayoutStyle, SocialChannel, SavedSlideTemplate, PlannedContentIdea } from '@/types/carousel';
-import { loadCarousels, saveCarousels, loadUserPreferences, saveUserPreferences, DEFAULT_USER_PREFERENCES, loadSavedSlideTemplates, saveSavedSlideTemplates, loadPlannedContentIdeas, savePlannedContentIdeas } from '@/lib/storage';
+import { loadCarousels, saveCarousels, loadUserPreferences, saveUserPreferences, DEFAULT_USER_PREFERENCES, loadSavedSlideTemplates, saveSavedSlideTemplates, loadPlannedContentIdeas, savePlannedContentIdeas, loadChatHistory, saveChatHistory } from '@/lib/storage';
 import { createSlide, formatSmartSlideText, detectComparisonLabels } from '@/lib/templates';
 import { DEFAULT_STUDENT_FRAMEWORKS } from '@/config/defaultContent';
 import { PRESET_MODELS } from '@/config/presetModels';
@@ -158,7 +158,7 @@ export function useCarouselState(profile: UserProfile) {
     // Sequência didática de formatos para o aluno aprender os diferentes estilos
     const slidePresets: Array<{ contentType: ContentType; layoutStyle: LayoutStyle }> = [
       { contentType: 'text_1_image', layoutStyle: 'news_article' }, // Slide 1: Notícia / Estudo do Google
-      { contentType: 'text_2_images', layoutStyle: 'comparison' },   // Slide 2: Comparativo Visível vs Invisível
+      { contentType: 'text_2_images', layoutStyle: 'twitter' },      // Slide 2: Comparativo Visível vs Invisível (Twitter com 2 imagens)
       { contentType: 'text_only', layoutStyle: 'immersive' },         // Slide 3: Frase Imersiva / Citação
       { contentType: 'text_1_image', layoutStyle: 'twitter' },         // Slide 4+: Twitter Post de Reflexão
     ];
@@ -731,6 +731,16 @@ export function useCarouselState(profile: UserProfile) {
   };
 
   const handleCreateCarouselFromPlannedIdea = async (idea: PlannedContentIdea) => {
+    // Se o carrossel já foi criado anteriormente para esta ideia, abre ele com todas as edições mantidas
+    if (idea.carouselId) {
+      const existing = carousels.find((c) => c.id === idea.carouselId);
+      if (existing) {
+        setActiveCarouselId(existing.id);
+        setActiveSlideIndex(0);
+        return existing;
+      }
+    }
+
     const prefs = await loadUserPreferences();
     const slides: Slide[] = [];
 
@@ -746,7 +756,7 @@ export function useCarouselState(profile: UserProfile) {
       idea.slidesContent.forEach((sc, idx) => {
         const isComparisonSlide = isComparisonTopic && (idx === 1 || idea.recommendedStyle === 'comparison');
         const contentType: ContentType = isComparisonSlide ? 'text_2_images' : 'text_1_image';
-        const style: LayoutStyle = isComparisonSlide ? 'comparison' : (idea.recommendedStyle || 'twitter');
+        const style: LayoutStyle = 'twitter';
 
         const s = createSlide(contentType, style);
         if (prefs.theme) s.theme = prefs.theme;
@@ -756,7 +766,7 @@ export function useCarouselState(profile: UserProfile) {
         }
 
         // Títulos e Manchetes para templates específicos (ex: news_article)
-        if (style === 'news_article') {
+        if ((style as string) === 'news_article') {
           s.newsTitle = sc.title || idea.title || 'ALERTA DE POSICIONAMENTO';
         }
 
@@ -790,7 +800,7 @@ export function useCarouselState(profile: UserProfile) {
       for (let i = 0; i < count; i++) {
         const isComparisonSlide = isComparisonTopic && i === 1;
         const contentType: ContentType = isComparisonSlide ? 'text_2_images' : 'text_1_image';
-        const style: LayoutStyle = isComparisonSlide ? 'comparison' : (idea.recommendedStyle || 'twitter');
+        const style: LayoutStyle = 'twitter';
 
         const s = createSlide(contentType, style);
         if (prefs.theme) s.theme = prefs.theme;
@@ -809,8 +819,10 @@ export function useCarouselState(profile: UserProfile) {
       }
     }
 
+    const carouselId = idea.carouselId || `carousel_planned_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`;
+
     const newCarousel: Carousel = {
-      id: `carousel_planned_${Date.now()}`,
+      id: carouselId,
       name: idea.title,
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
@@ -820,6 +832,9 @@ export function useCarouselState(profile: UserProfile) {
       caption: idea.description,
       selectedChannels: ['instagram', 'linkedin'],
     };
+
+    // Associa o ID do carrossel à ideia de conteúdo
+    idea.carouselId = newCarousel.id;
 
     const updatedCarousels = [...carousels, newCarousel];
     setCarousels(updatedCarousels);
@@ -832,6 +847,21 @@ export function useCarouselState(profile: UserProfile) {
       i.id === idea.id ? { ...i, status: 'created' as const, carouselId: newCarousel.id } : i
     );
     await savePlannedContentIdeas(updatedIdeas);
+
+    // Atualiza o histórico do chat de IA para que as variações mantenham o carouselId associado
+    const savedChat = await loadChatHistory();
+    if (savedChat && savedChat.length > 0) {
+      const updatedChat = savedChat.map((msg: any) => {
+        if (msg.extractedPlan && Array.isArray(msg.extractedPlan)) {
+          const updatedPlan = msg.extractedPlan.map((p: any) =>
+            p.id === idea.id ? { ...p, status: 'created', carouselId: newCarousel.id } : p
+          );
+          return { ...msg, extractedPlan: updatedPlan };
+        }
+        return msg;
+      });
+      await saveChatHistory(updatedChat);
+    }
 
     return newCarousel;
   };

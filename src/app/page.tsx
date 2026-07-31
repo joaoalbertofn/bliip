@@ -60,6 +60,7 @@ import {
   Check,
   RotateCcw,
   ZoomIn,
+  ZoomOut,
   Move,
   Type,
   Trash2,
@@ -314,6 +315,7 @@ export default function BliipApp() {
         {viewMode === 'planner' && (
           <ContentPlanner
             profile={profile}
+            carousels={carousels}
             apiKey={integrations.apiKey || integrations.bufferApiKey}
             onCreateCarouselFromIdea={async (idea) => {
               setPreviousView('planner');
@@ -409,8 +411,8 @@ export default function BliipApp() {
                 title="Texto do Slide"
                 defaultOpen={true}
               >
-                {/* RÓTULOS DE IMAGENS SE COMPARATIVO (2 IMAGENS) */}
-                {activeSlide.layoutStyle === 'comparison' && (
+                {/* RÓTULOS DE IMAGENS SE HOUVER 2 IMAGENS (ANTES / DEPOIS) */}
+                {activeSlide.contentType === 'text_2_images' && (
                   <div className="flex flex-col gap-2 mb-3 pb-3 border-b border-slate-800/80">
                     <label className="text-xs font-semibold text-slate-300 flex items-center justify-between">
                       <span>Rótulos das Imagens de Comparação</span>

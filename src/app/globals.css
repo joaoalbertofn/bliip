@@ -17,13 +17,16 @@ body {
   overflow-x: hidden;
 }
 
-/* Marca-texto amarelo com estilo limpo */
+/* Marca-texto amarelo com estilo limpo e fluido em linha */
 mark {
   background-color: #fef08a !important;
   color: #0f172a !important;
-  padding: 0.1em 0.3em;
-  border-radius: 0.25rem;
+  padding: 0.15em 0.35em !important;
+  border-radius: 0.25rem !important;
   box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+  display: inline !important;
+  -webkit-box-decoration-break: clone !important;
+  box-decoration-break: clone !important;
 }
 
 /* Scrollbars customizadas elegantes */

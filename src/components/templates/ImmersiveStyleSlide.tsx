@@ -25,9 +25,33 @@ export const ImmersiveStyleSlide: React.FC<ImmersiveStyleSlideProps> = ({ slide,
 
   const processMarkTags = (htmlText: string) => {
     if (!htmlText) return htmlText;
-    return htmlText.replace(
-      /<mark([^>]*)>/g,
-      `<mark style="background-color: ${theme.markBg}; color: ${theme.markText}; padding: 2px 6px; border-radius: 4px; font-weight: 600;">`
+    let formatted = htmlText.replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>');
+    return formatted.replace(
+      /<mark(?:\s+class="[^"]*")?>([\s\S]*?)<\/mark>/gi,
+      (match, innerText) => {
+        let cleanInner = innerText.replace(/<\/?(div|p)[^>]*>/gi, '');
+        const textOnly = cleanInner.replace(/<[^>]*>/g, '').trim();
+        if (!textOnly) {
+          return cleanInner;
+        }
+
+        let prefixBr = '';
+        let suffixBr = '';
+        cleanInner = cleanInner.replace(/^(?:\s*<br\s*\/?>\s*)+/gi, (m: string) => {
+          prefixBr = m;
+          return '';
+        });
+        cleanInner = cleanInner.replace(/(?:\s*<br\s*\/?>\s*)+$/gi, (m: string) => {
+          suffixBr = m;
+          return '';
+        });
+
+        if (!cleanInner.trim()) {
+          return `${prefixBr}${suffixBr}`;
+        }
+
+        return `${prefixBr}<mark style="background-color: ${theme.markBg}; color: ${theme.markText}; padding: 2px 6px; border-radius: 4px; font-weight: 600; display: inline; -webkit-box-decoration-break: clone; box-decoration-break: clone;">${cleanInner}</mark>${suffixBr}`;
+      }
     );
   };
 
