@@ -53,7 +53,7 @@ export const MediaTray: React.FC<MediaTrayProps> = ({
         ref={fileInputRef}
         type="file"
         multiple
-        accept="image/*"
+        accept="image/*,video/*"
         onChange={handleFileChange}
         className="hidden"
       />
@@ -72,40 +72,47 @@ export const MediaTray: React.FC<MediaTrayProps> = ({
       >
         <UploadCloud className={`w-5 h-5 mb-1 ${isDragOver ? 'text-indigo-400 animate-bounce' : 'text-slate-400'}`} />
         <p className="text-[11px] font-semibold text-slate-300">
-          Solte fotos aqui ou clique para selecionar
+          Solte mídias (fotos/vídeos) aqui ou clique
         </p>
-        <span className="text-[10px] text-slate-500 mt-0.5">Suporta seleções múltiplas de imagens</span>
+        <span className="text-[10px] text-slate-500 mt-0.5">Suporta seleções múltiplas de fotos e vídeos</span>
       </div>
 
       {/* GRADE DE THUMBNAILS ARRASTÁVEIS ESTILO CANVA */}
       {mediaLibrary.length > 0 && (
         <div className="flex flex-col gap-2 pt-1">
           <div className="grid grid-cols-4 gap-2 max-h-48 overflow-y-auto pr-1 scrollbar-thin">
-            {mediaLibrary.map((url, idx) => (
-              <div
-                key={idx}
-                draggable
-                onDragStart={(e) => handleThumbnailDragStart(e, url)}
-                onClick={() => onCreateSlideFromMedia(url)}
-                className="group relative aspect-square rounded-lg overflow-hidden border border-slate-700 bg-slate-950 cursor-grab active:cursor-grabbing hover:border-indigo-500 hover:shadow-glow transition"
-                title="✋ Clique para criar novo slide ou Arraste para o Canvas!"
-              >
-                <img src={url} alt={`Mídia ${idx + 1}`} className="w-full h-full object-cover group-hover:scale-105 transition" />
-                <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition flex items-center justify-center gap-1">
-                  <button
-                    type="button"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      onRemoveMedia(idx);
-                    }}
-                    className="p-1 bg-red-600/90 text-white rounded-md hover:bg-red-700 transition"
-                    title="Excluir da bandeja"
-                  >
-                    <Trash2 className="w-3 h-3" />
-                  </button>
+            {mediaLibrary.map((url, idx) => {
+              const isVid = url.startsWith('data:video/') || !!url.match(/\.(mp4|mov|webm)(\?.*)?$/i);
+              return (
+                <div
+                  key={idx}
+                  draggable
+                  onDragStart={(e) => handleThumbnailDragStart(e, url)}
+                  onClick={() => onCreateSlideFromMedia(url)}
+                  className="group relative aspect-square rounded-lg overflow-hidden border border-slate-700 bg-slate-950 cursor-grab active:cursor-grabbing hover:border-indigo-500 hover:shadow-glow transition flex items-center justify-center"
+                  title="✋ Clique para criar novo slide ou Arraste para o Canvas!"
+                >
+                  {isVid ? (
+                    <video src={url} className="w-full h-full object-cover group-hover:scale-105 transition pointer-events-none" />
+                  ) : (
+                    <img src={url} alt={`Mídia ${idx + 1}`} className="w-full h-full object-cover group-hover:scale-105 transition" />
+                  )}
+                  <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition flex items-center justify-center gap-1">
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        onRemoveMedia(idx);
+                      }}
+                      className="p-1 bg-red-600/90 text-white rounded-md hover:bg-red-700 transition"
+                      title="Excluir da bandeja"
+                    >
+                      <Trash2 className="w-3 h-3" />
+                    </button>
+                  </div>
                 </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
 
           <div className="flex items-center gap-1.5 text-[10px] text-indigo-300/80 bg-indigo-950/30 p-2 rounded-lg border border-indigo-900/40">

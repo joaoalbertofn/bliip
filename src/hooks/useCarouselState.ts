@@ -601,9 +601,14 @@ export function useCarouselState(profile: UserProfile) {
     const readPromises = fileArray.map(
       (file) =>
         new Promise<string>((resolve) => {
-          const reader = new FileReader();
-          reader.onload = (e) => resolve(e.target?.result as string);
-          reader.readAsDataURL(file);
+          const isVideoFile = file.type.startsWith('video/') || !!file.name.match(/\.(mp4|mov|webm)(\?.*)?$/i);
+          if (isVideoFile) {
+            resolve(URL.createObjectURL(file));
+          } else {
+            const reader = new FileReader();
+            reader.onload = (e) => resolve(e.target?.result as string);
+            reader.readAsDataURL(file);
+          }
         })
     );
 
@@ -629,16 +634,20 @@ export function useCarouselState(profile: UserProfile) {
   };
 
   const handleAssignMediaToSlide = (slideId: string, imageIndex: number, url: string) => {
+    const isVideo = url.startsWith('blob:') || url.startsWith('data:video/') || !!url.match(/\.(mp4|mov|webm)(\?.*)?$/i);
+    const mediaType: 'image' | 'video' = isVideo ? 'video' : 'image';
+
     const updatedSlides = activeCarousel.slides.map((s) => {
       if (s.id !== slideId) return s;
       const images = [...(s.layers.images || [])];
       images[imageIndex] = {
         id: `img_${Date.now()}_${imageIndex}`,
         position: imageIndex === 0 ? 'top' : 'bottom',
-        source: { type: 'upload', url },
+        source: { type: 'upload', url, mediaType },
         scale: 1,
         offsetX: 0,
         offsetY: 0,
+        ...(isVideo ? { videoConfig: { duration: 0, muted: true, loop: true } } : {}),
       };
 
       // Se o slide estiver em modo 'text_only', muda automaticamente para 'text_1_image'

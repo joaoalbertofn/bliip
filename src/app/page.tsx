@@ -14,7 +14,7 @@ import { Navbar } from '@/components/Navbar';
 import { SlideCanvas } from '@/components/SlideCanvas';
 import { SlideReorderBar } from '@/components/SlideReorderBar';
 import { TemplateSelector } from '@/components/TemplateSelector';
-import { HighlightTextEditor } from '@/components/HighlightTextEditor';
+import { InlineCanvasEditorRef } from '@/components/InlineCanvasEditor';
 import { MediaTray } from '@/components/MediaTray';
 import { CollapsibleSection } from '@/components/CollapsibleSection';
 import { PostCaptionEditor } from '@/components/PostCaptionEditor';
@@ -46,8 +46,17 @@ const ContentPlanner = dynamic(
   () => import('@/components/ContentPlanner').then((mod) => mod.ContentPlanner),
   { ssr: false }
 );
+const MediaCompatibilityModal = dynamic(
+  () => import('@/components/modals/MediaCompatibilityModal').then((mod) => mod.MediaCompatibilityModal),
+  { ssr: false }
+);
 
-import { SidebarNav } from '@/components/SidebarNav';
+import { SocialMediaValidator, CompatibilityDiagnosis } from '@/lib/validators/SocialMediaValidator';
+
+import { SidebarNav, CreatorViewMode } from '@/components/SidebarNav';
+import { VerticalVideoCreatorView } from '@/components/creators/VerticalVideoCreatorView';
+import { StoriesCreatorView } from '@/components/creators/StoriesCreatorView';
+import { LongVideoCreatorView } from '@/components/creators/LongVideoCreatorView';
 
 import {
   Upload,
@@ -71,18 +80,23 @@ import {
   SlidersHorizontal,
   AlignLeft,
   AlignCenter,
-  AlignRight
+  AlignRight,
+  Highlighter
 } from 'lucide-react';
 
 export default function BliipApp() {
   const { data: session } = useSession();
-  const [viewMode, setViewMode] = useState<'dashboard' | 'editor' | 'planner'>('dashboard');
-  const [previousView, setPreviousView] = useState<'dashboard' | 'planner'>('dashboard');
+  const [viewMode, setViewMode] = useState<CreatorViewMode>('dashboard');
+  const [previousView, setPreviousView] = useState<CreatorViewMode>('dashboard');
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
   const [profile, setProfile] = useState<UserProfile>(DEFAULT_USER_PROFILE);
   const [selectedImageIndex, setSelectedImageIndex] = useState<number>(0);
   const [canvasZoom, setCanvasZoom] = useState<'fit' | number>('fit');
   const [autoFitScale, setAutoFitScale] = useState<number>(1);
+
+  // Referência do editor de texto ativo no Canvas & campo em foco
+  const activeEditorRef = useRef<InlineCanvasEditorRef>(null);
+  const [focusedTextField, setFocusedTextField] = useState<'body' | 'title' | 'quote' | 'signature' | null>(null);
 
   // Estados de Recolhimento dos Painéis Laterais (3 Colunas)
   const [isLeftPanelOpen, setIsLeftPanelOpen] = useState(true);
@@ -97,6 +111,10 @@ export default function BliipApp() {
   const [isAddSlideModalOpen, setIsAddSlideModalOpen] = useState(false);
   const [isSaveTemplateModalOpen, setIsSaveTemplateModalOpen] = useState(false);
   const [slideTargetForSaveTemplate, setSlideTargetForSaveTemplate] = useState<Slide | null>(null);
+
+  // Estado do Modal de Compatibilidade de Mídias
+  const [compatibilityDiagnosis, setCompatibilityDiagnosis] = useState<CompatibilityDiagnosis | null>(null);
+  const [isCompatibilityModalOpen, setIsCompatibilityModalOpen] = useState(false);
 
   const [integrations, setIntegrations] = useState<IntegrationConfig>({ bufferApiKey: '' });
   const [connectedChannels, setConnectedChannels] = useState<SocialChannel[]>(['instagram', 'linkedin']);
@@ -227,6 +245,36 @@ export default function BliipApp() {
     handleCreateCarouselFromPlannedIdea,
   } = useCarouselState(profile);
 
+  // Intercepta e valida quando uma mídia (especialmente vídeo) é atribuída a um slide
+  const onAssignMediaWithValidation = (slideId: string, imageIndex: number, url: string) => {
+    handleAssignMediaToSlide(slideId, imageIndex, url);
+
+    const isVid = url.startsWith('blob:') || url.startsWith('data:video/') || !!url.match(/\.(mp4|mov|webm)(\?.*)?$/i);
+    if (isVid && activeCarousel) {
+      // Monta a lista de slides atualizada de forma síncrona para validar imediatamente no SocialMediaValidator
+      const updatedSlides = activeCarousel.slides.map((s) => {
+        if (s.id !== slideId) return s;
+        const images = [...(s.layers.images || [])];
+        images[imageIndex] = {
+          id: `img_${Date.now()}_${imageIndex}`,
+          position: imageIndex === 0 ? 'top' : 'bottom',
+          source: { type: 'upload', url, mediaType: 'video' },
+        };
+        return {
+          ...s,
+          contentType: s.contentType === 'text_only' ? ('text_1_image' as ContentType) : s.contentType,
+          layers: { ...s.layers, images },
+        };
+      });
+
+      const selectedChannels = activeCarousel.selectedChannels || ['instagram', 'linkedin'];
+      const diagnosis = SocialMediaValidator.validateCarousel(updatedSlides, selectedChannels);
+      if (!diagnosis.isCompatible) {
+        setCompatibilityDiagnosis(diagnosis);
+        setIsCompatibilityModalOpen(true);
+      }
+    }
+  };
   // Refs de captura para exportação
   const activeSlideRef = useRef<HTMLDivElement>(null);
   const hiddenSlideRefs = useRef<(HTMLDivElement | null)[]>([]);
@@ -325,7 +373,22 @@ export default function BliipApp() {
           />
         )}
 
-        {/* VIEW 3: Bliip STUDIO (EDITOR VISUAL) */}
+        {/* VIEW: CRIADOR DE VÍDEOS VERTICAIS (9:16) */}
+        {viewMode === 'vertical_video' && (
+          <VerticalVideoCreatorView onBackToDashboard={() => setViewMode('dashboard')} />
+        )}
+
+        {/* VIEW: CRIADOR DE STORIES (24H) */}
+        {viewMode === 'stories' && (
+          <StoriesCreatorView onBackToDashboard={() => setViewMode('dashboard')} />
+        )}
+
+        {/* VIEW: CRIADOR DE VÍDEOS LONGOS (16:9) */}
+        {viewMode === 'long_video' && (
+          <LongVideoCreatorView onBackToDashboard={() => setViewMode('dashboard')} />
+        )}
+
+        {/* VIEW 3: Bliip STUDIO (EDITOR VISUAL CARROSSEL/POST) */}
         {viewMode === 'editor' && (
           <div className="w-full h-full flex flex-col overflow-hidden">
       {/* Top Header Navbar */}
@@ -389,12 +452,43 @@ export default function BliipApp() {
             <div className="flex-1 overflow-y-auto p-4 flex flex-col gap-4 scrollbar-thin scrollbar-thumb-slate-800">
 
 
-              {/* SEÇÃO 2: Estilo Visual & Tipo de Conteúdo */}
+              {/* SEÇÃO 2: Estilo Visual & Layout do Slide */}
               <CollapsibleSection
                 icon={<Sliders className="w-4 h-4" />}
                 title="Estilo Visual & Layout"
                 defaultOpen={true}
               >
+                {/* Seção de Proporção de Tela do Carrossel */}
+                <div className="flex flex-col gap-2 mb-3 pb-3 border-b border-slate-800/80">
+                  <label className="text-xs font-semibold text-slate-300 flex items-center justify-between">
+                    <span>Proporção do Carrossel</span>
+                  </label>
+                  <div className="grid grid-cols-2 gap-2">
+                    <button
+                      type="button"
+                      onClick={() => handleToggleAspectRatio('4:5')}
+                      className={`py-2 text-xs font-bold rounded-xl border transition flex items-center justify-center gap-1.5 ${
+                        (activeCarousel.aspectRatio || '4:5') === '4:5'
+                          ? 'bg-indigo-600 border-indigo-500 text-white shadow-md'
+                          : 'bg-slate-950 border-slate-800 text-slate-400 hover:text-white hover:border-slate-700'
+                      }`}
+                    >
+                      <span>Retrato (4:5)</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => handleToggleAspectRatio('1:1')}
+                      className={`py-2 text-xs font-bold rounded-xl border transition flex items-center justify-center gap-1.5 ${
+                        activeCarousel.aspectRatio === '1:1'
+                          ? 'bg-indigo-600 border-indigo-500 text-white shadow-md'
+                          : 'bg-slate-950 border-slate-800 text-slate-400 hover:text-white hover:border-slate-700'
+                      }`}
+                    >
+                      <span>Quadrado (1:1)</span>
+                    </button>
+                  </div>
+                </div>
+
                 <TemplateSelector
                   currentContentType={activeSlide.contentType || 'text_1_image'}
                   currentLayoutStyle={activeSlide.layoutStyle || 'twitter'}
@@ -403,24 +497,17 @@ export default function BliipApp() {
                   onSelectLayoutStyle={handleSelectLayoutStyle}
                   onSelectImageLayout={handleUpdateImageLayout}
                 />
-              </CollapsibleSection>
 
-              {/* SEÇÃO 3: Edição de Texto do Slide */}
-              <CollapsibleSection
-                icon={<Layers className="w-4 h-4" />}
-                title="Texto do Slide"
-                defaultOpen={true}
-              >
-                {/* RÓTULOS DE IMAGENS SE HOUVER 2 IMAGENS (ANTES / DEPOIS) */}
+                {/* RÓTULOS DE MÍDIAS SE HOUVER 2 MÍDIAS (ANTES / DEPOIS) */}
                 {activeSlide.contentType === 'text_2_images' && (
-                  <div className="flex flex-col gap-2 mb-3 pb-3 border-b border-slate-800/80">
+                  <div className="flex flex-col gap-2 mt-4 pt-3 border-t border-slate-800/80">
                     <label className="text-xs font-semibold text-slate-300 flex items-center justify-between">
-                      <span>Rótulos das Imagens de Comparação</span>
+                      <span>Rótulos das Mídias de Comparação</span>
                       <span className="text-[10px] text-slate-500 font-mono">(Limpar remove do slide)</span>
                     </label>
                     <div className="grid grid-cols-2 gap-2">
                       <div>
-                        <span className="text-[10px] text-slate-400 font-medium block mb-1">Rótulo Imagem 1:</span>
+                        <span className="text-[10px] text-slate-400 font-medium block mb-1">Rótulo Mídia 1:</span>
                         <input
                           type="text"
                           value={activeSlide.layers.images?.[0]?.title ?? 'Antes'}
@@ -430,7 +517,7 @@ export default function BliipApp() {
                         />
                       </div>
                       <div>
-                        <span className="text-[10px] text-slate-400 font-medium block mb-1">Rótulo Imagem 2:</span>
+                        <span className="text-[10px] text-slate-400 font-medium block mb-1">Rótulo Mídia 2:</span>
                         <input
                           type="text"
                           value={activeSlide.layers.images?.[1]?.title ?? 'Depois'}
@@ -442,157 +529,9 @@ export default function BliipApp() {
                     </div>
                   </div>
                 )}
-
-                {/* TÍTULO DA NOTÍCIA SE NOTÍCIA */}
-                {activeSlide.layoutStyle === 'news_article' && (
-                  <div className="flex flex-col gap-2 mb-3 pb-3 border-b border-slate-800/80">
-                    <div className="flex items-center justify-between">
-                      <label className="text-xs font-semibold text-slate-300">
-                        Título da Notícia
-                      </label>
-                      <div className="flex items-center gap-1 bg-slate-950 p-0.5 rounded-lg border border-slate-800">
-                        {(['left', 'center', 'right'] as const).map((align) => (
-                          <button
-                            key={align}
-                            type="button"
-                            onClick={() => handleUpdateTitleAlignment(align)}
-                            className={`p-1 rounded transition ${
-                              (activeSlide.titleAlignment || 'left') === align
-                                ? 'bg-indigo-600 text-white'
-                                : 'text-slate-400 hover:text-slate-200'
-                            }`}
-                            title={`Alinhar título à ${align === 'left' ? 'Esquerda' : align === 'center' ? 'Centro' : 'Direita'}`}
-                          >
-                            {align === 'left' ? <AlignLeft className="w-3 h-3" /> : align === 'center' ? <AlignCenter className="w-3 h-3" /> : <AlignRight className="w-3 h-3" />}
-                          </button>
-                        ))}
-                      </div>
-                    </div>
-                    <input
-                      type="text"
-                      value={activeSlide.title ?? 'MAS O PROCESSO NÃO SE RESUME A CORTAR.'}
-                      onChange={(e) => handleUpdateNewsTitle(e.target.value)}
-                      placeholder="Digite o título em destaque da notícia..."
-                      className="w-full bg-slate-950 border border-slate-700/80 rounded-lg px-3 py-2 text-white text-xs font-bold uppercase focus:outline-none focus:ring-1 focus:ring-indigo-500"
-                    />
-                  </div>
-                )}
-
-                {activeSlide.layoutStyle === 'immersive' ? (
-                  <div className="flex flex-col gap-3">
-                    <label className="text-xs font-semibold text-slate-300 flex items-center gap-1.5">
-                      <Quote className="w-3.5 h-3.5 text-amber-400" />
-                      <span>Citação Inspiracional</span>
-                    </label>
-                    <HighlightTextEditor
-                      value={
-                        activeSlide.layers.text?.find((t) => t.role === 'quote' || t.role === 'body')?.content || ''
-                      }
-                      onChange={handleQuoteTextChange}
-                      rows={4}
-                      placeholder="Digite a citação imersiva..."
-                    />
-
-                    <div className="flex flex-col gap-1.5 mt-1 pt-3 border-t border-slate-800/80">
-                      <label className="text-xs font-semibold text-slate-300">
-                        Assinatura (Manuscrito)
-                      </label>
-                      <input
-                        type="text"
-                        value={activeSlide.layers.text?.find((t) => t.role === 'signature')?.content || ''}
-                        onChange={(e) => handleSignatureChange(e.target.value)}
-                        placeholder={`Padrão: ${profile.name}`}
-                        className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3.5 py-2 text-white text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 font-handwriting text-xl"
-                      />
-                    </div>
-                  </div>
-                ) : (
-                  <div className="flex flex-col gap-2">
-                    <div className="flex items-center justify-between">
-                      <label className="text-xs font-semibold text-slate-300 flex items-center gap-1.5">
-                        <Type className="w-3.5 h-3.5 text-amber-400" />
-                        <span>Conteúdo do Tweet / Post</span>
-                      </label>
-
-                      <div className="flex items-center gap-2">
-                        {/* Seletor de Alinhamento do Texto Principal */}
-                        <div className="flex items-center gap-1 bg-slate-950 p-0.5 rounded-lg border border-slate-800">
-                          {(['left', 'center', 'right'] as const).map((align) => (
-                            <button
-                              key={align}
-                              type="button"
-                              onClick={() => handleUpdateTextAlignment(align)}
-                              className={`p-1 rounded transition ${
-                                (activeSlide.textAlignment || 'left') === align
-                                  ? 'bg-indigo-600 text-white'
-                                  : 'text-slate-400 hover:text-slate-200'
-                              }`}
-                              title={`Alinhar texto à ${align === 'left' ? 'Esquerda' : align === 'center' ? 'Centro' : 'Direita'}`}
-                            >
-                              {align === 'left' ? <AlignLeft className="w-3 h-3" /> : align === 'center' ? <AlignCenter className="w-3 h-3" /> : <AlignRight className="w-3 h-3" />}
-                            </button>
-                          ))}
-                        </div>
-
-                        {activeSlide.contentType === 'text_only' && (
-                          <div className="flex items-center gap-1">
-                            {['Você:', 'Bliip:'].map((prefix) => (
-                              <button
-                                key={prefix}
-                                type="button"
-                                onClick={() => {
-                                  const current = activeSlide.layers.text?.[0]?.content || '';
-                                  const newText = current ? `${current}\n\n${prefix} ` : `${prefix} `;
-                                  handleTextChange(0, newText);
-                                }}
-                                className="px-2 py-0.5 text-[10px] font-bold bg-indigo-950 border border-indigo-700 text-indigo-300 rounded hover:bg-indigo-900 transition"
-                              >
-                                +{prefix}
-                              </button>
-                            ))}
-                          </div>
-                        )}
-                      </div>
-                    </div>
-
-                    <HighlightTextEditor
-                      value={activeSlide.layers.text?.[0]?.content || ''}
-                      onChange={(newText) => handleTextChange(0, newText)}
-                      rows={5}
-                      placeholder="Digite o texto do slide..."
-                    />
-
-                    {/* Seletor de Tamanho da Fonte Predefinido (P, M, G, GG) */}
-                    <div className="flex items-center justify-between mt-2 pt-2 border-t border-slate-800/80">
-                      <span className="text-xs font-semibold text-slate-300">Tamanho da Fonte:</span>
-                      <div className="flex items-center gap-1 bg-slate-950 p-1 rounded-lg border border-slate-800">
-                        {[
-                          { label: 'P', size: 16, title: 'Pequeno (16px)' },
-                          { label: 'M', size: 20, title: 'Médio (20px - Padrão)' },
-                          { label: 'G', size: 24, title: 'Grande (24px)' },
-                          { label: 'GG', size: 28, title: 'Extra Grande (28px)' },
-                        ].map((preset) => (
-                          <button
-                            key={preset.size}
-                            type="button"
-                            onClick={() => handleFontSizeChange(preset.size)}
-                            className={`px-2.5 py-1 text-xs font-extrabold rounded-md transition ${
-                              (activeSlide.fontSize ?? 20) === preset.size
-                                ? 'bg-indigo-600 text-white shadow-sm'
-                                : 'text-slate-400 hover:text-slate-200'
-                            }`}
-                            title={preset.title}
-                          >
-                            {preset.label}
-                          </button>
-                        ))}
-                      </div>
-                    </div>
-                  </div>
-                )}
               </CollapsibleSection>
 
-              {/* SEÇÃO 4: Presets de Temas de Cores */}
+              {/* SEÇÃO 3: Presets de Temas de Cores */}
               <CollapsibleSection
                 icon={<Palette className="w-4 h-4" />}
                 title="Tema de Cores do Slide"
@@ -632,121 +571,214 @@ export default function BliipApp() {
           </aside>
         )}
 
-        {/* COLUNA 2: 🎯 Content Workspace (Painel Central: Canvas + Legenda Global Lado a Lado + Slides) */}
-        <main className="flex-1 bg-slate-950 flex flex-col justify-between p-4 overflow-hidden relative min-w-0">
-          {/* ÁREA CENTRAL LADO A LADO: Canvas do Slide (Esquerda) + Editor de Legenda Global (Direita) */}
-          <div className="flex-1 flex flex-col lg:flex-row items-center justify-center gap-6 overflow-hidden min-h-0 w-full">
-            {/* Lado Esquerdo do Centro: Slide Canvas com Zoom & Controles Flutuantes */}
-            <div className="flex-1 h-full flex flex-col items-center justify-center overflow-hidden min-h-0 relative w-full">
-              {/* Barra Flutuante de Proporção & Zoom */}
-              <div className="flex items-center gap-3 bg-slate-900/90 border border-slate-800 px-3.5 py-1 rounded-2xl shadow-xl backdrop-blur mb-2 z-10 shrink-0">
-                <div className="flex items-center gap-1.5">
-                  <span className="text-[11px] font-semibold text-slate-400">Proporção:</span>
+        {/* COLUNA 2: 🎯 Content Workspace (Painel Central: Header Full-Width + Canvas + Legenda Global + Slides) */}
+        <main className="flex-1 bg-slate-950 flex flex-col justify-between overflow-hidden relative min-w-0">
+          {/* SUB-HEADER SUPERIOR DE PONTA A PONTA (FULL-WIDTH 100% W) */}
+          <header className="w-full bg-slate-900 border-b border-slate-800 px-4 py-2 flex items-center justify-between shrink-0 z-20 shadow-md">
+            {/* GRUPO A (Esquerda): Zoom da Tela & Visualização */}
+            <div className="flex items-center gap-2 shrink-0">
+              <ZoomIn className="w-4 h-4 text-slate-400" />
+              <span className="text-xs font-bold text-slate-300">Zoom Tela:</span>
+              <div className="flex items-center gap-1 bg-slate-950 p-0.5 rounded-lg border border-slate-800">
+                {(['fit', 80, 100, 120] as const).map((zoomVal) => (
                   <button
+                    key={zoomVal}
                     type="button"
-                    onClick={() => handleToggleAspectRatio('4:5')}
-                    className={`px-2.5 py-0.5 text-xs font-bold rounded-full transition ${
-                      (activeCarousel.aspectRatio || '4:5') === '4:5'
-                        ? 'bg-indigo-600 text-white shadow'
+                    onClick={() => setCanvasZoom(zoomVal)}
+                    className={`px-2.5 py-1 text-xs font-extrabold rounded-md transition ${
+                      canvasZoom === zoomVal
+                        ? 'bg-indigo-600 text-white shadow-sm'
                         : 'text-slate-400 hover:text-white'
                     }`}
                   >
-                    4:5
+                    {zoomVal === 'fit' ? 'Fit' : `${zoomVal}%`}
                   </button>
-                  <button
-                    type="button"
-                    onClick={() => handleToggleAspectRatio('1:1')}
-                    className={`px-2.5 py-0.5 text-xs font-bold rounded-full transition ${
-                      activeCarousel.aspectRatio === '1:1'
-                        ? 'bg-indigo-600 text-white shadow'
-                        : 'text-slate-400 hover:text-white'
-                    }`}
-                  >
-                    1:1
-                  </button>
-                </div>
-
-                <div className="w-px h-4 bg-slate-800" />
-
-                <div className="flex items-center gap-1.5">
-                  <ZoomIn className="w-3.5 h-3.5 text-slate-400" />
-                  <span className="text-[11px] font-semibold text-slate-400">Zoom Tela:</span>
-                  {(['fit', 80, 100, 120] as const).map((zoomVal) => (
-                    <button
-                      key={zoomVal}
-                      type="button"
-                      onClick={() => setCanvasZoom(zoomVal)}
-                      className={`px-2 py-0.5 text-xs font-bold rounded-md transition ${
-                        canvasZoom === zoomVal
-                          ? 'bg-slate-700 text-indigo-300 border border-indigo-500/40 shadow'
-                          : 'text-slate-400 hover:text-white'
-                      }`}
-                    >
-                      {zoomVal === 'fit' ? 'Fit' : `${zoomVal}%`}
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              {/* Display do Canvas */}
-              <div
-                ref={canvasContainerRef}
-                className="flex-1 w-full flex items-center justify-center overflow-hidden py-1 transition-all duration-150 min-h-0"
-              >
-                <div
-                  className="flex items-center justify-center transition-all duration-200"
-                  style={{
-                    transform: `scale(${effectiveZoomScale})`,
-                    transformOrigin: 'center center',
-                  }}
-                >
-                  <SlideCanvas
-                    ref={activeSlideRef}
-                    slide={activeSlide}
-                    profile={profile}
-                    aspectRatio={activeCarousel.aspectRatio || '4:5'}
-                    onImageTransform={handleImageTransform}
-                    onAssignMedia={handleAssignMediaToSlide}
-                  />
-                </div>
+                ))}
               </div>
             </div>
 
-            {/* Lado Direito do Centro: Editor de Legenda Global (Post Caption) */}
-            <div className="w-full lg:w-[340px] xl:w-[380px] h-auto max-h-full bg-slate-900/80 border border-slate-800 rounded-2xl p-4 flex flex-col shrink-0 shadow-card self-center my-auto overflow-y-auto scrollbar-thin">
-              <PostCaptionEditor
-                caption={activeCarousel.caption || ''}
-                selectedChannels={activeCarousel.selectedChannels || ['instagram', 'linkedin']}
-                connectedChannels={connectedChannels}
-                isBufferConnected={isBufferConnected}
-                onCaptionChange={handleCaptionChange}
-                onToggleChannel={handleToggleChannel}
-                onOpenIntegrations={() => setIsIntegrationsModalOpen(true)}
+            {/* GRUPO B (Direita): Ferramentas de Formatação e Edição de Texto */}
+            <div className="flex items-center gap-3 shrink-0">
+              {/* Alinhamento do Texto */}
+              <div className="flex items-center gap-1 bg-slate-950 p-0.5 rounded-lg border border-slate-800">
+                {(['left', 'center', 'right'] as const).map((align) => {
+                  const isTitleField = focusedTextField === 'title';
+                  const currentAlign = isTitleField
+                    ? (activeSlide.titleAlignment || 'left')
+                    : (activeSlide.textAlignment || 'left');
+
+                  return (
+                    <button
+                      key={align}
+                      type="button"
+                      onMouseDown={(e) => {
+                        e.preventDefault();
+                        if (isTitleField) {
+                          handleUpdateTitleAlignment(align);
+                        } else {
+                          handleUpdateTextAlignment(align);
+                        }
+                      }}
+                      className={`p-1.5 rounded-md transition ${
+                        currentAlign === align
+                          ? 'bg-indigo-600 text-white shadow-sm'
+                          : 'text-slate-400 hover:text-slate-200'
+                      }`}
+                      title={`Alinhar à ${align === 'left' ? 'Esquerda' : align === 'center' ? 'Centro' : 'Direita'}`}
+                    >
+                      {align === 'left' ? <AlignLeft className="w-3.5 h-3.5" /> : align === 'center' ? <AlignCenter className="w-3.5 h-3.5" /> : <AlignRight className="w-3.5 h-3.5" />}
+                    </button>
+                  );
+                })}
+              </div>
+
+              <div className="w-px h-4 bg-slate-800 shrink-0" />
+
+              {/* Botões Marca-Texto, Negrito, Limpar */}
+              <div className="flex items-center gap-1.5">
+                <button
+                  type="button"
+                  onMouseDown={(e) => {
+                    e.preventDefault();
+                    activeEditorRef.current?.applyHighlight();
+                  }}
+                  className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-extrabold bg-amber-400 text-amber-950 hover:bg-amber-300 rounded-lg transition active:scale-95 shadow-sm"
+                  title="Destacar texto selecionado com Marca-Texto"
+                >
+                  <Highlighter className="w-3.5 h-3.5" />
+                  <span>Marca-Texto</span>
+                </button>
+
+                <button
+                  type="button"
+                  onMouseDown={(e) => {
+                    e.preventDefault();
+                    activeEditorRef.current?.applyBold();
+                  }}
+                  className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-extrabold bg-slate-800 text-slate-200 hover:bg-slate-700 rounded-lg transition active:scale-95 border border-slate-700"
+                  title="Negrito"
+                >
+                  <span className="font-black px-0.5">B</span>
+                  <span>Negrito</span>
+                </button>
+
+                <button
+                  type="button"
+                  onMouseDown={(e) => {
+                    e.preventDefault();
+                    activeEditorRef.current?.removeFormatting();
+                  }}
+                  className="p-1.5 text-slate-400 hover:text-white hover:bg-slate-800 rounded-lg transition"
+                  title="Limpar formatação do texto"
+                >
+                  <RotateCcw className="w-3.5 h-3.5" />
+                </button>
+              </div>
+
+              <div className="w-px h-4 bg-slate-800 shrink-0" />
+
+              {/* Seletor de Tamanho da Fonte (P, M, G, GG) */}
+              <div className="flex items-center gap-1 bg-slate-950 p-0.5 rounded-lg border border-slate-800">
+                {[
+                  { label: 'P', size: 16, title: 'Pequeno (16px)' },
+                  { label: 'M', size: 20, title: 'Médio (20px - Padrão)' },
+                  { label: 'G', size: 24, title: 'Grande (24px)' },
+                  { label: 'GG', size: 28, title: 'Extra Grande (28px)' },
+                ].map((preset) => (
+                  <button
+                    key={preset.size}
+                    type="button"
+                    onMouseDown={(e) => {
+                      e.preventDefault();
+                      handleFontSizeChange(preset.size);
+                    }}
+                    className={`px-2.5 py-1 text-xs font-extrabold rounded-md transition ${
+                      (activeSlide.fontSize ?? 20) === preset.size
+                        ? 'bg-indigo-600 text-white shadow-sm'
+                        : 'text-slate-400 hover:text-slate-200'
+                    }`}
+                    title={preset.title}
+                  >
+                    {preset.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+          </header>
+
+          {/* ÁREA CENTRAL DE CONTEÚDO */}
+          <div className="flex-1 flex flex-col justify-between p-4 overflow-hidden min-h-0">
+            {/* ÁREA CENTRAL LADO A LADO: Canvas do Slide (Esquerda) + Editor de Legenda Global (Direita) */}
+            <div className="flex-1 flex flex-col lg:flex-row items-center justify-center gap-6 overflow-hidden min-h-0 w-full">
+              {/* Lado Esquerdo do Centro: Slide Canvas */}
+              <div className="flex-1 h-full flex flex-col items-center justify-center overflow-hidden min-h-0 relative w-full">
+                {/* Display do Canvas */}
+                <div
+                  ref={canvasContainerRef}
+                  className="flex-1 w-full flex items-center justify-center overflow-hidden py-1 transition-all duration-150 min-h-0"
+                >
+                  <div
+                    className="flex items-center justify-center transition-all duration-200"
+                    style={{
+                      transform: `scale(${effectiveZoomScale})`,
+                      transformOrigin: 'center center',
+                    }}
+                  >
+                    <SlideCanvas
+                      ref={activeSlideRef}
+                      slide={activeSlide}
+                      profile={profile}
+                      aspectRatio={activeCarousel.aspectRatio || '4:5'}
+                      onImageTransform={handleImageTransform}
+                      onAssignMedia={onAssignMediaWithValidation}
+                      onTextChange={handleTextChange}
+                      onNewsTitleChange={handleUpdateNewsTitle}
+                      onQuoteTextChange={handleQuoteTextChange}
+                      onSignatureChange={handleSignatureChange}
+                      onTextFocus={(field) => setFocusedTextField(field)}
+                      onTextBlur={() => setFocusedTextField(null)}
+                      activeEditorRef={activeEditorRef}
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {/* Lado Direito do Centro: Editor de Legenda Global (Post Caption) */}
+              <div className="w-full lg:w-[340px] xl:w-[380px] h-auto max-h-full bg-slate-900/80 border border-slate-800 rounded-2xl p-4 flex flex-col shrink-0 shadow-card self-center my-auto overflow-y-auto scrollbar-thin">
+                <PostCaptionEditor
+                  caption={activeCarousel.caption || ''}
+                  selectedChannels={activeCarousel.selectedChannels || ['instagram', 'linkedin']}
+                  connectedChannels={connectedChannels}
+                  isBufferConnected={isBufferConnected}
+                  onCaptionChange={handleCaptionChange}
+                  onToggleChannel={handleToggleChannel}
+                  onOpenIntegrations={() => setIsIntegrationsModalOpen(true)}
+                />
+              </div>
+            </div>
+
+            {/* Rodapé Central: Barra de Reordenação de Slides Intacta */}
+            <div className="w-full pt-3 shrink-0">
+              <SlideReorderBar
+                slides={activeCarousel.slides}
+                activeIndex={activeSlideIndex}
+                onSelectSlide={(idx) => setActiveSlideIndex(idx)}
+                onAddSlide={() => setIsAddSlideModalOpen(true)}
+                onInsertSlideAt={(idx) => {
+                  setActiveSlideIndex(idx - 1 >= 0 ? idx - 1 : 0);
+                  setIsAddSlideModalOpen(true);
+                }}
+                onDuplicateSlide={handleDuplicateSlide}
+                onDeleteSlide={handleDeleteSlide}
+                onMoveSlide={handleMoveSlide}
+                onOpenSaveTemplateModal={(slide) => {
+                  setSlideTargetForSaveTemplate(slide);
+                  setIsSaveTemplateModalOpen(true);
+                }}
+                onAssignMedia={handleAssignMediaToSlide}
+                onCreateSlideFromMedia={handleCreateSlideFromMedia}
               />
             </div>
-          </div>
-
-          {/* Rodapé Central: Barra de Reordenação de Slides */}
-          <div className="w-full pt-3 shrink-0">
-            <SlideReorderBar
-              slides={activeCarousel.slides}
-              activeIndex={activeSlideIndex}
-              onSelectSlide={(idx) => setActiveSlideIndex(idx)}
-              onAddSlide={() => setIsAddSlideModalOpen(true)}
-              onInsertSlideAt={(idx) => {
-                setActiveSlideIndex(idx - 1 >= 0 ? idx - 1 : 0);
-                setIsAddSlideModalOpen(true);
-              }}
-              onDuplicateSlide={handleDuplicateSlide}
-              onDeleteSlide={handleDeleteSlide}
-              onMoveSlide={handleMoveSlide}
-              onOpenSaveTemplateModal={(slide) => {
-                setSlideTargetForSaveTemplate(slide);
-                setIsSaveTemplateModalOpen(true);
-              }}
-              onAssignMedia={handleAssignMediaToSlide}
-              onCreateSlideFromMedia={handleCreateSlideFromMedia}
-            />
           </div>
         </main>
 
@@ -840,6 +872,22 @@ export default function BliipApp() {
           if (slideTargetForSaveTemplate) {
             handleSaveSlideAsTemplate(name, slideTargetForSaveTemplate);
           }
+        }}
+      />
+      <MediaCompatibilityModal
+        isOpen={isCompatibilityModalOpen}
+        onClose={() => setIsCompatibilityModalOpen(false)}
+        incompatibleChannels={compatibilityDiagnosis?.incompatibleChannels || ['linkedin']}
+        onConfirmRemoveIncompatibleChannels={() => {
+          if (activeCarousel) {
+            const currentChannels = activeCarousel.selectedChannels || ['instagram', 'linkedin'];
+            const filtered = currentChannels.filter((c) => c !== 'linkedin' && c !== 'tiktok');
+            handleToggleChannel(filtered[0] || 'instagram');
+          }
+          setIsCompatibilityModalOpen(false);
+        }}
+        onConfirmUseCoverImageForLinkedIn={() => {
+          setIsCompatibilityModalOpen(false);
         }}
       />
     </div>

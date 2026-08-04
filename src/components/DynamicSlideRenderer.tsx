@@ -5,12 +5,20 @@ import { getTemplateSchema } from '@/templates/schemas/templatesRegistry';
 import { TemplateHeader } from './templates/TemplateHeader';
 import { InteractiveImageContainer } from './InteractiveImageContainer';
 import { BlockConfig } from '@/types/templateSchema';
+import { InlineCanvasEditor, InlineCanvasEditorRef } from './InlineCanvasEditor';
 
 interface DynamicSlideRendererProps {
   slide: Slide;
   profile: UserProfile;
   onImageTransform?: (imageIndex: number, transform: { scale?: number; offsetX?: number; offsetY?: number }) => void;
   onAssignMedia?: (slideId: string, imageIndex: number, url: string) => void;
+  onTextChange?: (textIndex: number, newContent: string) => void;
+  onNewsTitleChange?: (newTitle: string) => void;
+  onQuoteTextChange?: (newQuote: string) => void;
+  onSignatureChange?: (newSignature: string) => void;
+  onTextFocus?: (field: 'body' | 'title' | 'quote' | 'signature') => void;
+  onTextBlur?: () => void;
+  activeEditorRef?: React.Ref<InlineCanvasEditorRef>;
 }
 
 export const DynamicSlideRenderer: React.FC<DynamicSlideRendererProps> = ({
@@ -18,6 +26,13 @@ export const DynamicSlideRenderer: React.FC<DynamicSlideRendererProps> = ({
   profile,
   onImageTransform,
   onAssignMedia,
+  onTextChange,
+  onNewsTitleChange,
+  onQuoteTextChange,
+  onSignatureChange,
+  onTextFocus,
+  onTextBlur,
+  activeEditorRef,
 }) => {
   const theme = getSlideTheme(slide.theme, slide.background);
   const schema = getTemplateSchema(slide.layoutStyle || 'twitter', slide.contentType || 'text_1_image');
@@ -78,6 +93,27 @@ export const DynamicSlideRenderer: React.FC<DynamicSlideRendererProps> = ({
 
   // Formatação de parágrafos e diálogos usando customFontSize e textAlignment
   const renderFormattedText = (rawText: string) => {
+    if (onTextChange) {
+      return (
+        <InlineCanvasEditor
+          ref={activeEditorRef}
+          value={rawText}
+          onChange={(newText) => onTextChange(0, newText)}
+          onFocus={() => onTextFocus?.('body')}
+          onBlur={onTextBlur}
+          fontSize={customFontSize}
+          textAlign={slide.textAlignment || 'left'}
+          themeText={theme.text}
+          themeTextSecondary={theme.textSecondary}
+          themeMarkBg={theme.markBg}
+          themeMarkText={theme.markText}
+          themeSpeakerBg={theme.speakerBg}
+          themeSpeakerText={theme.speakerText}
+          placeholder="Digite o texto do slide aqui..."
+        />
+      );
+    }
+
     if (!rawText) {
       return (
         <span className="italic opacity-60" style={{ color: theme.textSecondary, fontSize: `${customFontSize}px` }}>
@@ -134,13 +170,35 @@ export const DynamicSlideRenderer: React.FC<DynamicSlideRendererProps> = ({
         return <TemplateHeader key={idx} profile={profile} themeConfig={theme} />;
 
       case 'title_text':
-        // O título da notícia só deve ser exibido se o estilo visual do slide for 'news_article'
         if (slide.layoutStyle !== 'news_article') return null;
 
         const rawTitle = slide.title !== undefined ? slide.title : 'MAS O PROCESSO NÃO SE RESUME A CORTAR.';
-        if (!rawTitle || rawTitle.trim() === '') return null;
+        const titleAlign = slide.titleAlignment || 'left';
 
-        const titleAlignClass = slide.titleAlignment === 'center' ? 'text-center' : slide.titleAlignment === 'right' ? 'text-right' : 'text-left';
+        if (onNewsTitleChange) {
+          return (
+            <div key={idx} className="shrink-0 my-0.5 w-full">
+              <InlineCanvasEditor
+                value={rawTitle}
+                onChange={onNewsTitleChange}
+                onFocus={() => onTextFocus?.('title')}
+                onBlur={onTextBlur}
+                fontSize={Math.round(customFontSize * 1.25)}
+                textAlign={titleAlign}
+                themeText={theme.text}
+                themeTextSecondary={theme.textSecondary}
+                themeMarkBg={theme.markBg}
+                themeMarkText={theme.markText}
+                placeholder="Digite o título da notícia..."
+                className="font-black uppercase tracking-tight"
+                isSingleLine={true}
+              />
+            </div>
+          );
+        }
+
+        if (!rawTitle || rawTitle.trim() === '') return null;
+        const titleAlignClass = titleAlign === 'center' ? 'text-center' : titleAlign === 'right' ? 'text-right' : 'text-left';
 
         return (
           <div key={idx} className={`shrink-0 my-0.5 w-full ${titleAlignClass}`}>
@@ -160,6 +218,27 @@ export const DynamicSlideRenderer: React.FC<DynamicSlideRendererProps> = ({
         );
 
       case 'quote_text':
+        if (onQuoteTextChange) {
+          return (
+            <div key={idx} className="my-auto max-w-lg w-full flex flex-col items-center justify-center">
+              <InlineCanvasEditor
+                value={quoteText}
+                onChange={onQuoteTextChange}
+                onFocus={() => onTextFocus?.('quote')}
+                onBlur={onTextBlur}
+                fontSize={Math.round(customFontSize * 1.2)}
+                textAlign="center"
+                themeText={theme.text}
+                themeTextSecondary={theme.textSecondary}
+                themeMarkBg={theme.markBg}
+                themeMarkText={theme.markText}
+                placeholder="Digite a citação imersiva..."
+                className="font-serif italic font-medium"
+              />
+            </div>
+          );
+        }
+
         return (
           <div key={idx} className="my-auto max-w-lg w-full flex flex-col items-center justify-center">
             {quoteText ? (
@@ -177,6 +256,28 @@ export const DynamicSlideRenderer: React.FC<DynamicSlideRendererProps> = ({
         );
 
       case 'signature_text':
+        if (onSignatureChange) {
+          return (
+            <div key={idx} className="mt-auto pt-2 pb-1 w-full text-center flex justify-center items-center shrink-0">
+              <InlineCanvasEditor
+                value={signatureLayer?.content || profile.name}
+                onChange={onSignatureChange}
+                onFocus={() => onTextFocus?.('signature')}
+                onBlur={onTextBlur}
+                fontSize={24}
+                textAlign="center"
+                themeText={theme.text}
+                themeTextSecondary={theme.textSecondary}
+                themeMarkBg={theme.markBg}
+                themeMarkText={theme.markText}
+                placeholder="Digite a assinatura..."
+                className="font-handwriting italic text-2xl tracking-wider"
+                isSingleLine={true}
+              />
+            </div>
+          );
+        }
+
         return (
           <div key={idx} className="mt-auto pt-2 pb-1 w-full text-center flex justify-center items-center shrink-0">
             <span className="font-handwriting tracking-wider font-semibold italic text-2xl" style={{ color: theme.text }}>

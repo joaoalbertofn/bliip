@@ -1,6 +1,7 @@
 import React, { forwardRef } from 'react';
 import { Slide, UserProfile } from '@/types/carousel';
 import { DynamicSlideRenderer } from './DynamicSlideRenderer';
+import { InlineCanvasEditorRef } from './InlineCanvasEditor';
 
 interface SlideCanvasProps {
   slide: Slide;
@@ -8,10 +9,33 @@ interface SlideCanvasProps {
   aspectRatio?: '4:5' | '1:1';
   onImageTransform?: (imageIndex: number, transform: { scale?: number; offsetX?: number; offsetY?: number }) => void;
   onAssignMedia?: (slideId: string, imageIndex: number, url: string) => void;
+  onTextChange?: (textIndex: number, newContent: string) => void;
+  onNewsTitleChange?: (newTitle: string) => void;
+  onQuoteTextChange?: (newQuote: string) => void;
+  onSignatureChange?: (newSignature: string) => void;
+  onTextFocus?: (field: 'body' | 'title' | 'quote' | 'signature') => void;
+  onTextBlur?: () => void;
+  activeEditorRef?: React.Ref<InlineCanvasEditorRef>;
 }
 
 export const SlideCanvas = forwardRef<HTMLDivElement, SlideCanvasProps>(
-  ({ slide, profile, aspectRatio = '4:5', onImageTransform, onAssignMedia }, ref) => {
+  (
+    {
+      slide,
+      profile,
+      aspectRatio = '4:5',
+      onImageTransform,
+      onAssignMedia,
+      onTextChange,
+      onNewsTitleChange,
+      onQuoteTextChange,
+      onSignatureChange,
+      onTextFocus,
+      onTextBlur,
+      activeEditorRef,
+    },
+    ref
+  ) => {
     const isSquare = aspectRatio === '1:1';
     const dimensionClasses = isSquare
       ? 'w-[460px] h-[460px] aspect-square'
@@ -30,6 +54,13 @@ export const SlideCanvas = forwardRef<HTMLDivElement, SlideCanvasProps>(
             profile={profile}
             onImageTransform={onImageTransform}
             onAssignMedia={onAssignMedia}
+            onTextChange={onTextChange}
+            onNewsTitleChange={onNewsTitleChange}
+            onQuoteTextChange={onQuoteTextChange}
+            onSignatureChange={onSignatureChange}
+            onTextFocus={onTextFocus}
+            onTextBlur={onTextBlur}
+            activeEditorRef={activeEditorRef}
           />
         </div>
       </div>

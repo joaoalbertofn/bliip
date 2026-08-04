@@ -89,7 +89,7 @@ export const SlideReorderBar: React.FC<SlideReorderBarProps> = ({
         <div className="flex items-center gap-2">
           <span className="font-bold text-slate-300">SLIDES DO CARROSSEL ({slides.length})</span>
           <span className="text-[10px] font-normal text-slate-500 hidden sm:inline">
-            • Arraste ou use + para inserir ou solte fotos
+            • Arraste ou use + para inserir ou soltar mídias (fotos/vídeos)
           </span>
         </div>
 

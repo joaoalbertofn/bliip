@@ -1,6 +1,6 @@
-# Bliip — Criador de Carrosséis e Posts para Instagram & Redes Sociais
+# Bliip — Criador de Carrosséis, Vídeos e Posts para Instagram & Redes Sociais
 
-O **Bliip** é uma plataforma SaaS moderna para criação rápida, edição visual e agendamento de posts e carrosséis visuais para redes sociais (Instagram, LinkedIn, Facebook, YouTube Community) inspirada nos estilos visuais de Bruno Perini e Sadhguru, com inteligência artificial integrada.
+O **Bliip** é uma plataforma SaaS moderna para criação rápida, edição visual, geração de vídeos e agendamento de posts e carrosséis visuais para redes sociais (Instagram, LinkedIn, Facebook, YouTube Community, TikTok), inspirada nos estilos visuais de Bruno Perini e Sadhguru, com inteligência artificial integrada.
 
 ---
 
@@ -17,6 +17,7 @@ O **Bliip** é uma plataforma SaaS moderna para criação rápida, edição visu
 - **Vínculo Dinâmico Chat ↔ Estúdio**: Preservação das edições feitas no estúdio quando o conteúdo é acessado pelo chat do planejador ou calendário.
 
 ### 🎨 Editor Visual de Carrosséis & Estilos
+- **Editor WYSIWYG de Canvas (`InlineCanvasEditor`)**: Edição direta de texto no próprio slide com suporte a realce em marca-texto (`<mark>`), negrito e tratamento de quebra de linhas inteligente.
 - **Formatos e Layouts Especiais**: Suporte a layouts Twitter/X Style, Immersive, Comparison e News Article.
 - **Temas Visuais & Paletas**: Temas predefinidos (Bruno Perini, Dark Minimal, High Contrast, Gradient, Vibrant Light, etc.).
 - **Marca-Texto Fluido, Purificado & Inteligente**: Formatação de destaques (`<mark>`) semânticos em linha sem blocos quadrados, sanitização defensiva contra vazamento de atributos Tailwind e remoção automática de tags vazias.
@@ -26,6 +27,16 @@ O **Bliip** é uma plataforma SaaS moderna para criação rápida, edição visu
   - Botões de **Reset de Enquadramento**, **📁 Trocar Imagem** e **🗑️ Remover Imagem**.
   - Ocultamento automático da barra de zoom ao clicar fora da imagem.
 - **Editor de Legenda Global**: Legenda unificada para o post com atalhos para emojis, hashtags e CTAs.
+
+### 🎬 Criadores de Conteúdo Multi-Formato
+- **📱 Criador de Vídeos Verticais (Reels / TikTok / Shorts)**: Suporte ao formato 9:16 com preview de timeline, editor de ganchos (Hook 3s) e closed captions dinâmicos.
+- **🎥 Criador de Vídeos Longos (YouTube / LinkedIn / Facebook Watch)**: Formato 16:9 widescreen com gerador de thumbnails e marcadores de tempo (timestamps/capítulos) para SEO.
+- **⚡ Criador de Stories**: Suporte a narrativas efêmeras de 24h com múltiplos cards em sequência e elementos de engajamento.
+
+### 🛡️ Validação & Renderização Avançada de Mídia
+- **`VideoRenderEngine`**: Extração instantânea de frames de vídeo (poster image / thumbnail) a partir de arquivos MP4/MOV para uso como capa estática.
+- **`ImageRenderEngine`**: Captura de slides em PNG Ultra HD (3x pixel ratio) e compressão otimizada em lote via ZIP.
+- **`SocialMediaValidator` & Modal de Compatibilidade**: Diagnóstico dinâmico de compatibilidade de mídias por canal social. Avisa e oferece opções ao usuário caso mídias em vídeo sejam usadas em canais incompatíveis com carrosséis de vídeo (como LinkedIn).
 
 ### 🎞️ Barra de Reordenação e Edição Rápida de Slides
 - **Exclusão de 1 Clique**: Ícone de lixeira (🗑️) direto no topo do card de cada slide para remoção rápida sem precisar abrir menus suspensos.
@@ -64,11 +75,11 @@ O **Bliip** é uma plataforma SaaS moderna para criação rápida, edição visu
 ├───────────────────────────────┬────────────────────────────────────────────────────────┬──────────────────────────────┤
 │ ⬅️ Slide Design (Esquerda)    │ 🎯 Content Workspace (Centro)                          │ ➡️ Social Post Preview (Direita)│
 │ [Recolhível]                  │                                                        │ [Recolhível]                 │
-│                               │ 🖼️ Canvas do Slide Selecionado (Toolbar de Zoom/Foto)  │ 🌐 Checkboxes de Redes       │
+│                               │ 🖼️ Canvas do Slide Selecionado (Inline Canvas Editor)   │ 🌐 Checkboxes de Redes       │
 │ • Estilo Visual & Tipo        │ 📝 Editor de Legenda Global (Lado a lado do Canvas)    │   (Instagram, LinkedIn, etc) │
 │ • Texto & Marca-Texto         │ 🎞️ Barra Inferior (Reordenação & Lixeira 1-Clique)     │                              │
 │ • Temas de Cores              │                                                        │ 📱 Lista de Previews         │
-│                               │                                                        │   Empilstados em Scroll      │
+│                               │                                                        │   Empilhados em Scroll       │
 └───────────────────────────────┴────────────────────────────────────────────────────────┴──────────────────────────────┘
 ```
 
@@ -137,12 +148,16 @@ O **Bliip** é uma plataforma SaaS moderna para criação rápida, edição visu
 ```text
 src/
 ├── app/                  # Rotas do Next.js App Router & Server Actions / APIs (/api/ai, /api/buffer, /api/lead-sync)
-├── components/           # Componentes React (Editor, Dashboard, Canvas, Modais, Previews e Speech Input)
+├── components/           # Componentes React (Editor, Dashboard, Canvas, InlineCanvasEditor, Speech Input)
+│   ├── creators/         # Criadores de conteúdo multi-formato (Vídeos Verticais, Vídeos Longos, Stories)
+│   ├── modals/           # Modais de interface (Exportação, Compatibilidade de Mídia, etc)
 │   ├── previews/         # Mockups de pré-visualização (Instagram, LinkedIn, Facebook, YouTube)
 │   └── templates/        # Renderizadores visuais dos modelos de slides
 ├── domain/               # Regras de negócio puras (validações de legenda, slide e carrossel)
 ├── hooks/                # Custom React Hooks (useCarouselState, useSpeechRecognition)
 ├── lib/                  # Utilitários, storage (IndexedDB), contextExtractor, exportadores e adaptadores de publicação
+│   ├── renderers/        # Motores de renderização de imagem (ImageRenderEngine) e vídeo (VideoRenderEngine)
+│   └── validators/       # Validadores de compatibilidade de mídias sociais (SocialMediaValidator)
 ├── templates/            # Schemas e registros de modelos de slide
 └── types/                # Definições de tipos TypeScript do domínio
 ```

@@ -1,15 +1,23 @@
 import { SlideTheme } from '@/lib/themes';
 
 export type ImageSource = 
-  | { type: "upload"; url: string }
-  | { type: "ai_generated"; provider: string; prompt: string; url: string }
-  | { type: "meme"; templateId: string; url: string };
+  | { type: "upload"; url: string; mediaType?: "image" | "video" }
+  | { type: "ai_generated"; provider: string; prompt: string; url: string; mediaType?: "image" | "video" }
+  | { type: "meme"; templateId: string; url: string; mediaType?: "image" | "video" };
 
 export type TextLayer = {
   id: string;
   content: string; // Suporta HTML com <mark> ou texto simples
   highlights?: { start: number; end: number }[];
   role: "body" | "quote" | "signature" | "dialogue" | "title";
+};
+
+export type VideoConfig = {
+  duration?: number;
+  startTime?: number;
+  endTime?: number;
+  muted?: boolean;
+  loop?: boolean;
 };
 
 export type ImageLayer = {
@@ -20,6 +28,7 @@ export type ImageLayer = {
   scale?: number;     // Fator de zoom: 1.0 a 3.0 (default: 1.0)
   offsetX?: number;   // Deslocamento X em % (default: 0)
   offsetY?: number;   // Deslocamento Y em % (default: 0)
+  videoConfig?: VideoConfig;
 };
 
 export type ContentType = "text_only" | "text_1_image" | "text_2_images";
@@ -60,7 +69,7 @@ export type Slide = {
   styleCache?: Partial<Record<LayoutStyle, SlideStyleData>>;
 };
 
-export type SocialChannel = 'instagram' | 'linkedin' | 'facebook';
+export type SocialChannel = 'instagram' | 'linkedin' | 'facebook' | 'tiktok' | 'youtube' | 'twitter';
 
 export type SavedSlideTemplate = {
   id: string;

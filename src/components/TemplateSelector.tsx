@@ -91,7 +91,7 @@ export const TemplateSelector: React.FC<TemplateSelectorProps> = ({
       <div className="flex flex-col gap-2">
         <label className="text-xs font-semibold text-slate-300 flex items-center gap-1.5">
           <Layout className="w-3.5 h-3.5 text-amber-400" />
-          <span>Tipo de Conteúdo (Imagens)</span>
+          <span>Tipo de Conteúdo (Mídias)</span>
         </label>
 
         <div className="grid grid-cols-3 gap-1.5">
@@ -112,7 +112,7 @@ export const TemplateSelector: React.FC<TemplateSelectorProps> = ({
                     ? 'border-amber-500 bg-amber-950/30 shadow-glow ring-1 ring-amber-500/50 text-white font-bold'
                     : 'border-slate-800 bg-slate-900/60 hover:bg-slate-800 text-slate-400'
                 }`}
-                title={isDisabled ? 'O estilo comparativo exige 2 imagens, e os outros estilos exigem 1 ou 0 imagens.' : type.name}
+                title={isDisabled ? 'O estilo comparativo exige 2 mídias, e os outros estilos exigem 1 ou 0 mídias.' : type.name}
               >
                 {getContentIcon(type.id)}
                 <span className="text-[10px] font-medium leading-tight">{type.name}</span>
@@ -121,11 +121,11 @@ export const TemplateSelector: React.FC<TemplateSelectorProps> = ({
           })}
         </div>
 
-        {/* SELETOR DE ORIENTAÇÃO DAS IMAGENS (Horizontal vs Vertical) */}
+        {/* SELETOR DE ORIENTAÇÃO DAS MÍDIAS (Horizontal vs Vertical) */}
         {canChangeOrientation(currentLayoutStyle, currentContentType) && (
           <div className="mt-2.5 pt-2.5 border-t border-slate-800/80 flex flex-col gap-1.5">
             <label className="text-[11px] font-semibold text-slate-300 flex items-center justify-between">
-              <span>Orientação das Imagens</span>
+              <span>Orientação das Mídias</span>
               <span className="text-[10px] font-mono text-indigo-400">
                 {currentImageLayout === 'horizontal' ? 'Lado a Lado' : 'Empilhado'}
               </span>

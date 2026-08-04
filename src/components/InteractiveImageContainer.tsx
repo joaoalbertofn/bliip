@@ -22,7 +22,7 @@ export const InteractiveImageContainer: React.FC<InteractiveImageContainerProps>
   onAssignMedia,
   onSelect,
   className = '',
-  fallbackText = 'Solte uma foto aqui ou clique para selecionar',
+  fallbackText = 'Solte uma mídia aqui ou clique para selecionar',
   cardBg = '#f8fafc',
   borderColor = '#e2e8f0',
   textSecondary = '#64748b',
@@ -140,6 +140,14 @@ export const InteractiveImageContainer: React.FC<InteractiveImageContainerProps>
     // 1. Arquivos arrastados direto do computador
     if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
       const file = e.dataTransfer.files[0];
+      const isVideoFile = file.type.startsWith('video/') || !!file.name.match(/\.(mp4|mov|webm)(\?.*)?$/i);
+      
+      if (isVideoFile && onAssignMedia) {
+        const objectUrl = URL.createObjectURL(file);
+        onAssignMedia(imageIndex, objectUrl);
+        return;
+      }
+
       const reader = new FileReader();
       reader.onload = (evt) => {
         const fileUrl = evt.target?.result as string;
@@ -151,7 +159,7 @@ export const InteractiveImageContainer: React.FC<InteractiveImageContainerProps>
       return;
     }
 
-    // 2. Foto arrastada da Bandeja de Mídias
+    // 2. Mídia arrastada da Bandeja de Mídias
     const droppedUrl = e.dataTransfer.getData('text/plain') || e.dataTransfer.getData('text/uri-list');
     if (droppedUrl && onAssignMedia) {
       onAssignMedia(imageIndex, droppedUrl);
@@ -161,6 +169,15 @@ export const InteractiveImageContainer: React.FC<InteractiveImageContainerProps>
   const handleFileInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0] && onAssignMedia) {
       const file = e.target.files[0];
+      const isVideoFile = file.type.startsWith('video/') || !!file.name.match(/\.(mp4|mov|webm)(\?.*)?$/i);
+      
+      if (isVideoFile) {
+        const objectUrl = URL.createObjectURL(file);
+        onAssignMedia(imageIndex, objectUrl);
+        e.target.value = '';
+        return;
+      }
+
       const reader = new FileReader();
       reader.onload = (evt) => {
         const fileUrl = evt.target?.result as string;
@@ -295,23 +312,39 @@ export const InteractiveImageContainer: React.FC<InteractiveImageContainerProps>
         <input
           ref={fileInputRef}
           type="file"
-          accept="image/*"
+          accept="image/*,video/*"
           onChange={handleFileInputChange}
           className="hidden"
         />
 
         {url ? (
-          <img
-            src={url}
-            alt={`Foto #${imageIndex + 1}`}
-            draggable={false}
-            className="w-full h-full object-cover rounded-xl transition-all duration-75 pointer-events-none"
-            style={{
-              objectPosition: `${posX}% ${posY}%`,
-              transform: `scale(${scale})`,
-              transformOrigin: `${posX}% ${posY}%`,
-            }}
-          />
+          imageLayer?.source?.mediaType === 'video' || url.startsWith('blob:') || url.startsWith('data:video/') || url.match(/\.(mp4|mov|webm)(\?.*)?$/i) ? (
+            <video
+              src={url}
+              autoPlay
+              loop
+              muted
+              playsInline
+              className="w-full h-full object-cover rounded-xl transition-all duration-75 pointer-events-none"
+              style={{
+                objectPosition: `${posX}% ${posY}%`,
+                transform: `scale(${scale})`,
+                transformOrigin: `${posX}% ${posY}%`,
+              }}
+            />
+          ) : (
+            <img
+              src={url}
+              alt={`Foto #${imageIndex + 1}`}
+              draggable={false}
+              className="w-full h-full object-cover rounded-xl transition-all duration-75 pointer-events-none"
+              style={{
+                objectPosition: `${posX}% ${posY}%`,
+                transform: `scale(${scale})`,
+                transformOrigin: `${posX}% ${posY}%`,
+              }}
+            />
+          )
         ) : (
           <div className="flex flex-col items-center justify-center p-4 text-center gap-1.5" style={{ color: textSecondary }}>
             <UploadCloud className="w-6 h-6 text-indigo-400 opacity-80 mb-0.5" />

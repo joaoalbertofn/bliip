@@ -1,10 +1,24 @@
 import React from 'react';
-import { LayoutDashboard, Sparkles, Calendar, User, Webhook, ChevronLeft, ChevronRight, Zap } from 'lucide-react';
+import {
+  LayoutDashboard,
+  GalleryHorizontalEnd,
+  Film,
+  Smartphone,
+  MonitorPlay,
+  BrainCircuit,
+  UserCog,
+  Plug,
+  ChevronLeft,
+  ChevronRight,
+  Zap,
+} from 'lucide-react';
 import { BliipLogo } from './BliipLogo';
 
+export type CreatorViewMode = 'dashboard' | 'editor' | 'planner' | 'vertical_video' | 'stories' | 'long_video';
+
 interface SidebarNavProps {
-  currentView: 'dashboard' | 'editor' | 'planner';
-  onNavigate: (view: 'dashboard' | 'editor' | 'planner') => void;
+  currentView: CreatorViewMode;
+  onNavigate: (view: CreatorViewMode) => void;
   isCollapsed: boolean;
   onToggleCollapse: () => void;
   onOpenProfile: () => void;
@@ -35,8 +49,8 @@ export const SidebarNav: React.FC<SidebarNavProps> = ({
         }`}
       >
         {/* Top Section: Header com Logo e Botão de Toggle Fixo no Topo */}
-        <div className="flex flex-col gap-6 w-full">
-          <div className="flex items-center justify-between w-full h-10 px-0.5">
+        <div className="flex flex-col gap-5 w-full overflow-y-auto scrollbar-none">
+          <div className="flex items-center justify-between w-full h-10 px-0.5 shrink-0">
             <div
               onClick={() => {
                 onNavigate('dashboard');
@@ -81,7 +95,14 @@ export const SidebarNav: React.FC<SidebarNavProps> = ({
               {!isCollapsed && <span>Dashboard</span>}
             </button>
 
-            {/* Item 2: Bliip Studio (Editor Visual) */}
+            {/* Divisor de Seção de Criação */}
+            {!isCollapsed && (
+              <div className="px-3 pt-2 text-[10px] font-extrabold text-slate-500 uppercase tracking-wider">
+                Ferramentas de Criação
+              </div>
+            )}
+
+            {/* 1. Criador de Carrossel / Post */}
             <button
               onClick={() => {
                 onNavigate('editor');
@@ -92,20 +113,96 @@ export const SidebarNav: React.FC<SidebarNavProps> = ({
                   ? 'bg-indigo-600 text-white shadow-glow'
                   : 'text-slate-400 hover:text-slate-100 hover:bg-slate-800/60'
               } ${isCollapsed ? 'justify-center px-0' : ''}`}
-              title="Studio Criador de Posts"
+              title="Criador de Carrossel & Posts Estáticos"
             >
-              <Sparkles className="w-4 h-4 shrink-0 text-amber-400" />
+              <GalleryHorizontalEnd className="w-4 h-4 shrink-0 text-amber-400" />
               {!isCollapsed && (
                 <div className="flex items-center justify-between w-full">
-                  <span>Criador de Posts</span>
-                  <span className="text-[9px] bg-amber-500/20 text-amber-300 border border-amber-500/30 px-1.5 py-0.5 rounded font-mono">
-                    Studio
+                  <span>Criador de Carrossel/Post</span>
+                </div>
+              )}
+            </button>
+
+            {/* 2. Criador de Vídeos Verticais */}
+            <button
+              onClick={() => {
+                onNavigate('vertical_video');
+                if (!isCollapsed) onToggleCollapse();
+              }}
+              className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl font-bold text-xs transition ${
+                currentView === 'vertical_video'
+                  ? 'bg-indigo-600 text-white shadow-glow'
+                  : 'text-slate-400 hover:text-slate-100 hover:bg-slate-800/60'
+              } ${isCollapsed ? 'justify-center px-0' : ''}`}
+              title="Criador de Vídeos Verticais (Reels / TikTok / Shorts)"
+            >
+              <Film className="w-4 h-4 shrink-0 text-pink-400" />
+              {!isCollapsed && (
+                <div className="flex items-center justify-between w-full">
+                  <span>Vídeos Verticais</span>
+                  <span className="text-[9px] bg-pink-500/20 text-pink-300 border border-pink-500/30 px-1.5 py-0.5 rounded font-mono">
+                    9:16
                   </span>
                 </div>
               )}
             </button>
 
-            {/* Item 3: Planejador & Calendário IA */}
+            {/* 3. Criador de Stories */}
+            <button
+              onClick={() => {
+                onNavigate('stories');
+                if (!isCollapsed) onToggleCollapse();
+              }}
+              className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl font-bold text-xs transition ${
+                currentView === 'stories'
+                  ? 'bg-indigo-600 text-white shadow-glow'
+                  : 'text-slate-400 hover:text-slate-100 hover:bg-slate-800/60'
+              } ${isCollapsed ? 'justify-center px-0' : ''}`}
+              title="Criador de Stories (Efêmero 24h)"
+            >
+              <Smartphone className="w-4 h-4 shrink-0 text-rose-400" />
+              {!isCollapsed && (
+                <div className="flex items-center justify-between w-full">
+                  <span>Criador de Stories</span>
+                  <span className="text-[9px] bg-rose-500/20 text-rose-300 border border-rose-500/30 px-1.5 py-0.5 rounded font-mono">
+                    24h
+                  </span>
+                </div>
+              )}
+            </button>
+
+            {/* 4. Criador de Vídeos Longos */}
+            <button
+              onClick={() => {
+                onNavigate('long_video');
+                if (!isCollapsed) onToggleCollapse();
+              }}
+              className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl font-bold text-xs transition ${
+                currentView === 'long_video'
+                  ? 'bg-indigo-600 text-white shadow-glow'
+                  : 'text-slate-400 hover:text-slate-100 hover:bg-slate-800/60'
+              } ${isCollapsed ? 'justify-center px-0' : ''}`}
+              title="Criador de Vídeos Longos (YouTube / LinkedIn)"
+            >
+              <MonitorPlay className="w-4 h-4 shrink-0 text-red-400" />
+              {!isCollapsed && (
+                <div className="flex items-center justify-between w-full">
+                  <span>Vídeos Longos</span>
+                  <span className="text-[9px] bg-red-500/20 text-red-300 border border-red-500/30 px-1.5 py-0.5 rounded font-mono">
+                    16:9
+                  </span>
+                </div>
+              )}
+            </button>
+
+            {/* Divisor de Estratégia */}
+            {!isCollapsed && (
+              <div className="px-3 pt-2 text-[10px] font-extrabold text-slate-500 uppercase tracking-wider">
+                Estratégia & IA
+              </div>
+            )}
+
+            {/* Item 5: Planejador & Calendário IA */}
             <button
               onClick={() => {
                 onNavigate('planner');
@@ -118,7 +215,7 @@ export const SidebarNav: React.FC<SidebarNavProps> = ({
               } ${isCollapsed ? 'justify-center px-0' : ''}`}
               title="Planejador Estratégico IA"
             >
-              <Calendar className="w-4 h-4 shrink-0 text-purple-400" />
+              <BrainCircuit className="w-4 h-4 shrink-0 text-purple-400" />
               {!isCollapsed && (
                 <div className="flex items-center justify-between w-full">
                   <span>Planejador IA</span>
@@ -144,7 +241,7 @@ export const SidebarNav: React.FC<SidebarNavProps> = ({
             }`}
             title="Perfil do Usuário & Perfil do Negócio"
           >
-            <User className="w-4 h-4 text-indigo-400 shrink-0" />
+            <UserCog className="w-4 h-4 text-indigo-400 shrink-0" />
             {!isCollapsed && <span>Perfil & Quiz do Negócio</span>}
           </button>
 
@@ -158,7 +255,7 @@ export const SidebarNav: React.FC<SidebarNavProps> = ({
             }`}
             title="Integrações Buffer & Webhook"
           >
-            <Webhook className="w-4 h-4 text-emerald-400 shrink-0" />
+            <Plug className="w-4 h-4 text-emerald-400 shrink-0" />
             {!isCollapsed && <span>Integrações API</span>}
           </button>
         </div>
@@ -166,4 +263,5 @@ export const SidebarNav: React.FC<SidebarNavProps> = ({
     </>
   );
 };
+
 

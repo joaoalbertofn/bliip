@@ -18,19 +18,19 @@ export const CONTENT_TYPES: Record<ContentType, ContentTypeDefinition> = {
   text_only: {
     id: 'text_only',
     name: 'Apenas Texto',
-    description: 'Sem imagens, foco em parágrafos, diálogos ou citações.',
+    description: 'Sem mídias, foco em parágrafos, diálogos ou citações.',
     maxImages: 0,
   },
   text_1_image: {
     id: 'text_1_image',
-    name: 'Texto + 1 Imagem',
-    description: '1 foto ou print com texto explicativo.',
+    name: 'Texto + 1 Mídia',
+    description: '1 foto, print ou vídeo com texto explicativo.',
     maxImages: 1,
   },
   text_2_images: {
     id: 'text_2_images',
-    name: 'Texto + 2 Imagens',
-    description: 'Até 2 imagens/gráficos (dispostas na vertical ou horizontal).',
+    name: 'Texto + 2 Mídias',
+    description: 'Até 2 mídias/vídeos (dispostas na vertical ou horizontal).',
     maxImages: 2,
   },
 };

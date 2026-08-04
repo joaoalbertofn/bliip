@@ -319,24 +319,62 @@ export const ExportModal: React.FC<ExportModalProps> = ({
           </button>
         </div>
 
-        {/* Seletor Dinâmico de Formatos Redes Sociais */}
-        <div className="mb-4 bg-slate-950/80 p-3 rounded-xl border border-slate-800">
-          <label className="text-xs font-semibold text-slate-300 flex items-center gap-1.5 mb-1.5">
-            <Layers className="w-3.5 h-3.5 text-indigo-400" />
-            <span>Formato do Conteúdo</span>
-          </label>
+        {/* Painel de Mapeamento de Formatos Nativos por Rede Social */}
+        <div className="mb-4 bg-slate-950/80 p-3.5 rounded-xl border border-slate-800 flex flex-col gap-2">
+          <div className="flex items-center justify-between text-xs font-semibold text-slate-300">
+            <span className="flex items-center gap-1.5">
+              <Layers className="w-3.5 h-3.5 text-indigo-400" />
+              <span>Formatos Nativos de Destino</span>
+            </span>
+            <span className="text-[10px] text-slate-400 font-mono">
+              {carousel.slides.length <= 1 ? 'Post Único' : `Carrossel (${carousel.slides.length} slides)`}
+            </span>
+          </div>
 
-          <select
-            value={selectedFormatId}
-            onChange={(e) => setSelectedFormatId(e.target.value)}
-            className="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-white text-xs font-medium focus:outline-none focus:ring-2 focus:ring-indigo-500"
-          >
-            {AVAILABLE_SOCIAL_FORMATS.map((fmt) => (
-              <option key={fmt.id} value={fmt.id}>
-                {fmt.name} {fmt.badge ? `(${fmt.badge})` : ''}
-              </option>
-            ))}
-          </select>
+          <div className="flex flex-col gap-2 pt-1">
+            {activeChannels.map((channel) => {
+              if (channel === 'instagram') {
+                return (
+                  <div key="instagram" className="p-2.5 bg-slate-900 border border-pink-500/30 rounded-xl flex items-center justify-between text-xs">
+                    <div className="flex items-center gap-2">
+                      <span className="w-2 h-2 rounded-full bg-pink-500" />
+                      <span className="font-bold text-white uppercase">Instagram</span>
+                    </div>
+                    <span className="text-[11px] text-pink-300 font-medium">
+                      {carousel.slides.length <= 1 ? 'Post Único no Feed' : 'Carrossel do Feed (PNGs HD)'}
+                    </span>
+                  </div>
+                );
+              }
+              if (channel === 'linkedin') {
+                return (
+                  <div key="linkedin" className="p-2.5 bg-slate-900 border border-blue-500/30 rounded-xl flex items-center justify-between text-xs">
+                    <div className="flex items-center gap-2">
+                      <span className="w-2 h-2 rounded-full bg-blue-500" />
+                      <span className="font-bold text-white uppercase">LinkedIn</span>
+                    </div>
+                    <span className="text-[11px] text-blue-300 font-medium">
+                      {carousel.slides.length <= 1 ? 'Post de Imagem com Legenda' : 'Post de Galeria / Imagens'}
+                    </span>
+                  </div>
+                );
+              }
+              if (channel === 'facebook') {
+                return (
+                  <div key="facebook" className="p-2.5 bg-slate-900 border border-indigo-500/30 rounded-xl flex items-center justify-between text-xs">
+                    <div className="flex items-center gap-2">
+                      <span className="w-2 h-2 rounded-full bg-indigo-500" />
+                      <span className="font-bold text-white uppercase">Facebook</span>
+                    </div>
+                    <span className="text-[11px] text-indigo-300 font-medium">
+                      {carousel.slides.length <= 1 ? 'Post de Imagem no Feed' : 'Álbum / Carrossel de Fotos'}
+                    </span>
+                  </div>
+                );
+              }
+              return null;
+            })}
+          </div>
         </div>
 
         {/* MENSAGEM DE STATUS DA PUBLICAÇÃO */}
