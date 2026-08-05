@@ -1,5 +1,5 @@
 import React, { forwardRef } from 'react';
-import { Slide, UserProfile } from '@/types/carousel';
+import { Slide, UserProfile, ImageMask } from '@/types/carousel';
 import { DynamicSlideRenderer } from './DynamicSlideRenderer';
 import { InlineCanvasEditorRef } from './InlineCanvasEditor';
 
@@ -8,6 +8,7 @@ interface SlideCanvasProps {
   profile: UserProfile;
   aspectRatio?: '4:5' | '1:1';
   onImageTransform?: (imageIndex: number, transform: { scale?: number; offsetX?: number; offsetY?: number }) => void;
+  onUpdateMasks?: (imageIndex: number, masks: ImageMask[]) => void;
   onAssignMedia?: (slideId: string, imageIndex: number, url: string) => void;
   onTextChange?: (textIndex: number, newContent: string) => void;
   onNewsTitleChange?: (newTitle: string) => void;
@@ -25,6 +26,7 @@ export const SlideCanvas = forwardRef<HTMLDivElement, SlideCanvasProps>(
       profile,
       aspectRatio = '4:5',
       onImageTransform,
+      onUpdateMasks,
       onAssignMedia,
       onTextChange,
       onNewsTitleChange,
@@ -53,6 +55,7 @@ export const SlideCanvas = forwardRef<HTMLDivElement, SlideCanvasProps>(
             slide={slide}
             profile={profile}
             onImageTransform={onImageTransform}
+            onUpdateMasks={onUpdateMasks}
             onAssignMedia={onAssignMedia}
             onTextChange={onTextChange}
             onNewsTitleChange={onNewsTitleChange}

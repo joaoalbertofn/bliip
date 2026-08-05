@@ -1,11 +1,14 @@
 import { get, set } from 'idb-keyval';
 import { Carousel, Slide, UserProfile, IntegrationConfig, ContentType, LayoutStyle, SocialChannel, SavedSlideTemplate, PlannedContentIdea } from '@/types/carousel';
+import { VerticalVideoProject } from '@/types/video';
 import { SlideTheme } from '@/lib/themes';
 
 const USER_PROFILE_KEY = 'bliip_user_profile';
 const CAROUSELS_KEY = 'bliip_carousels';
 const INTEGRATIONS_KEY = 'bliip_integrations';
 const USER_PREFERENCES_KEY = 'bliip_user_preferences';
+const VERTICAL_VIDEO_DRAFT_KEY = 'bliip_vertical_video_draft';
+const VERTICAL_VIDEO_BLOB_KEY = 'bliip_vertical_video_blob';
 
 export interface UserCreationPreferences {
   layoutStyle: LayoutStyle;
@@ -134,7 +137,7 @@ export function sanitizeCarousel(c: any): Carousel {
     name: typeof c?.name === 'string' && c.name.trim() !== '' ? c.name : 'Carrossel Sem Nome',
     createdAt: typeof c?.createdAt === 'string' ? c.createdAt : new Date().toISOString(),
     updatedAt: typeof c?.updatedAt === 'string' ? c.updatedAt : new Date().toISOString(),
-    status: c?.status === 'sent' ? 'sent' : c?.status === 'scheduled' ? 'scheduled' : 'draft',
+    status: c?.status === 'published' ? 'published' : c?.status === 'sent' ? 'sent' : c?.status === 'scheduled' ? 'scheduled' : 'draft',
     scheduledAt: typeof c?.scheduledAt === 'string' ? c.scheduledAt : undefined,
     aspectRatio: c?.aspectRatio === '1:1' ? '1:1' : '4:5',
     mediaLibrary: Array.isArray(c?.mediaLibrary) ? c.mediaLibrary : [],
@@ -403,4 +406,30 @@ export async function saveChatHistory(messages: any[]): Promise<void> {
   try {
     localStorage.setItem(CHAT_HISTORY_KEY, JSON.stringify(messages));
   } catch (err) {}
+}
+
+export async function saveVerticalVideoDraft(project: VerticalVideoProject, videoBlob?: Blob): Promise<void> {
+  if (typeof window === 'undefined') return;
+  try {
+    // Evita salvar Blob URL temporária que expira
+    const serializableProject = { ...project };
+    await set(VERTICAL_VIDEO_DRAFT_KEY, serializableProject);
+    if (videoBlob) {
+      await set(VERTICAL_VIDEO_BLOB_KEY, videoBlob);
+    }
+  } catch (e) {
+    console.warn('Erro ao salvar rascunho de vídeo vertical no IndexedDB:', e);
+  }
+}
+
+export async function loadVerticalVideoDraft(): Promise<{ project: VerticalVideoProject | null; videoBlob: Blob | null }> {
+  if (typeof window === 'undefined') return { project: null, videoBlob: null };
+  try {
+    const project = await get<VerticalVideoProject>(VERTICAL_VIDEO_DRAFT_KEY);
+    const videoBlob = await get<Blob>(VERTICAL_VIDEO_BLOB_KEY);
+    return { project: project || null, videoBlob: videoBlob || null };
+  } catch (e) {
+    console.warn('Erro ao carregar rascunho de vídeo vertical do IndexedDB:', e);
+  }
+  return { project: null, videoBlob: null };
 }

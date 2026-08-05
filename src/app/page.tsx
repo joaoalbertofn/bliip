@@ -17,7 +17,6 @@ import { TemplateSelector } from '@/components/TemplateSelector';
 import { InlineCanvasEditorRef } from '@/components/InlineCanvasEditor';
 import { MediaTray } from '@/components/MediaTray';
 import { CollapsibleSection } from '@/components/CollapsibleSection';
-import { PostCaptionEditor } from '@/components/PostCaptionEditor';
 import { SocialPostPreviewPanel } from '@/components/SocialPostPreviewPanel';
 import { NewCarouselModal } from '@/components/NewCarouselModal';
 import { triggerLeadSync } from '@/lib/leadSync';
@@ -217,6 +216,7 @@ export default function BliipApp() {
     handleSignatureChange,
     handleImageUpload,
     handleImageTransform,
+    handleUpdateImageMasks,
     handleThemeChange,
     handleBackgroundChange,
     handleFontSizeChange,
@@ -375,7 +375,11 @@ export default function BliipApp() {
 
         {/* VIEW: CRIADOR DE VÍDEOS VERTICAIS (9:16) */}
         {viewMode === 'vertical_video' && (
-          <VerticalVideoCreatorView onBackToDashboard={() => setViewMode('dashboard')} />
+          <VerticalVideoCreatorView
+            profile={profile}
+            onBackToDashboard={() => setViewMode('dashboard')}
+            onOpenExportModal={() => setIsExportModalOpen(true)}
+          />
         )}
 
         {/* VIEW: CRIADOR DE STORIES (24H) */}
@@ -708,52 +712,37 @@ export default function BliipApp() {
 
           {/* ÁREA CENTRAL DE CONTEÚDO */}
           <div className="flex-1 flex flex-col justify-between p-4 overflow-hidden min-h-0">
-            {/* ÁREA CENTRAL LADO A LADO: Canvas do Slide (Esquerda) + Editor de Legenda Global (Direita) */}
-            <div className="flex-1 flex flex-col lg:flex-row items-center justify-center gap-6 overflow-hidden min-h-0 w-full">
-              {/* Lado Esquerdo do Centro: Slide Canvas */}
-              <div className="flex-1 h-full flex flex-col items-center justify-center overflow-hidden min-h-0 relative w-full">
-                {/* Display do Canvas */}
+            {/* ÁREA CENTRAL: Slide Canvas (100% Centralizado) */}
+            <div className="flex-1 h-full flex flex-col items-center justify-center overflow-hidden min-h-0 relative w-full">
+              {/* Display do Canvas */}
+              <div
+                ref={canvasContainerRef}
+                className="flex-1 w-full flex items-center justify-center overflow-hidden py-1 transition-all duration-150 min-h-0"
+              >
                 <div
-                  ref={canvasContainerRef}
-                  className="flex-1 w-full flex items-center justify-center overflow-hidden py-1 transition-all duration-150 min-h-0"
+                  className="flex items-center justify-center transition-all duration-200"
+                  style={{
+                    transform: `scale(${effectiveZoomScale})`,
+                    transformOrigin: 'center center',
+                  }}
                 >
-                  <div
-                    className="flex items-center justify-center transition-all duration-200"
-                    style={{
-                      transform: `scale(${effectiveZoomScale})`,
-                      transformOrigin: 'center center',
-                    }}
-                  >
-                    <SlideCanvas
-                      ref={activeSlideRef}
-                      slide={activeSlide}
-                      profile={profile}
-                      aspectRatio={activeCarousel.aspectRatio || '4:5'}
-                      onImageTransform={handleImageTransform}
-                      onAssignMedia={onAssignMediaWithValidation}
-                      onTextChange={handleTextChange}
-                      onNewsTitleChange={handleUpdateNewsTitle}
-                      onQuoteTextChange={handleQuoteTextChange}
-                      onSignatureChange={handleSignatureChange}
-                      onTextFocus={(field) => setFocusedTextField(field)}
-                      onTextBlur={() => setFocusedTextField(null)}
-                      activeEditorRef={activeEditorRef}
-                    />
-                  </div>
+                  <SlideCanvas
+                    ref={activeSlideRef}
+                    slide={activeSlide}
+                    profile={profile}
+                    aspectRatio={activeCarousel.aspectRatio || '4:5'}
+                    onImageTransform={handleImageTransform}
+                    onUpdateMasks={handleUpdateImageMasks}
+                    onAssignMedia={onAssignMediaWithValidation}
+                    onTextChange={handleTextChange}
+                    onNewsTitleChange={handleUpdateNewsTitle}
+                    onQuoteTextChange={handleQuoteTextChange}
+                    onSignatureChange={handleSignatureChange}
+                    onTextFocus={(field) => setFocusedTextField(field)}
+                    onTextBlur={() => setFocusedTextField(null)}
+                    activeEditorRef={activeEditorRef}
+                  />
                 </div>
-              </div>
-
-              {/* Lado Direito do Centro: Editor de Legenda Global (Post Caption) */}
-              <div className="w-full lg:w-[340px] xl:w-[380px] h-auto max-h-full bg-slate-900/80 border border-slate-800 rounded-2xl p-4 flex flex-col shrink-0 shadow-card self-center my-auto overflow-y-auto scrollbar-thin">
-                <PostCaptionEditor
-                  caption={activeCarousel.caption || ''}
-                  selectedChannels={activeCarousel.selectedChannels || ['instagram', 'linkedin']}
-                  connectedChannels={connectedChannels}
-                  isBufferConnected={isBufferConnected}
-                  onCaptionChange={handleCaptionChange}
-                  onToggleChannel={handleToggleChannel}
-                  onOpenIntegrations={() => setIsIntegrationsModalOpen(true)}
-                />
               </div>
             </div>
 
@@ -782,12 +771,17 @@ export default function BliipApp() {
           </div>
         </main>
 
-        {/* COLUNA 3: ➡️ Social Post Preview (Painel Direito - Recolhível) */}
+        {/* COLUNA 3: ➡️ Social Post Preview & Legenda Global (Painel Direito - Recolhível) */}
         <SocialPostPreviewPanel
           carousel={activeCarousel}
           profile={profile}
           selectedChannels={activeCarousel.selectedChannels || ['instagram', 'linkedin']}
+          connectedChannels={connectedChannels}
+          isBufferConnected={isBufferConnected}
+          caption={activeCarousel.caption || ''}
+          onCaptionChange={handleCaptionChange}
           onToggleChannel={handleToggleChannel}
+          onOpenIntegrations={() => setIsIntegrationsModalOpen(true)}
           isOpen={isRightPanelOpen}
           onToggleOpen={() => setIsRightPanelOpen(!isRightPanelOpen)}
         />

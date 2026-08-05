@@ -1,10 +1,10 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Carousel, UserProfile } from '@/types/carousel';
 import { AVAILABLE_SOCIAL_FORMATS } from '@/types/socialFormats';
 import { exportElementToPng, downloadDataUrl, exportCarouselToZip, triggerWebhookIntegration, publishToBufferApi } from '@/lib/exporter';
 import { loadIntegrations } from '@/lib/storage';
 import { ChannelPublishResult } from '@/lib/publishers/PublishingAdapter';
-import { X, Download, Archive, Send, Loader2, CheckCircle2, Share2, Layers, Calendar, Clock, ChevronLeft, ChevronRight, Sparkles } from 'lucide-react';
+import { X, Download, Archive, Send, Loader2, CheckCircle2, AlertCircle, Share2, Layers, Calendar, Clock, ChevronLeft, ChevronRight, Sparkles } from 'lucide-react';
 
 interface ExportModalProps {
   isOpen: boolean;
@@ -14,7 +14,7 @@ interface ExportModalProps {
   profile: UserProfile;
   activeSlideElement: HTMLElement | null;
   allSlideElements: HTMLElement[];
-  onMarkAsSent?: () => void;
+  onMarkAsSent?: (status?: 'sent' | 'published') => void;
   onScheduleCarousel?: (carouselId: string, scheduledAt: string) => void;
 }
 
@@ -53,24 +53,34 @@ export const ExportModal: React.FC<ExportModalProps> = ({
     : '10:00';
   const [selectedTime, setSelectedTime] = useState<string>(initialTime);
 
+  const prevIsOpenRef = useRef(false);
+  const prevCarouselIdRef = useRef<string | null>(null);
+
   useEffect(() => {
     if (isOpen) {
-      if (carousel?.slides?.length <= 1) {
-        setSelectedFormatId('instagram_post');
-      } else {
-        setSelectedFormatId('instagram_carousel');
-      }
-      setStatusMessage(null);
-      setChannelResults([]);
-      
-      if (carousel?.scheduledAt) {
-        const d = new Date(carousel.scheduledAt);
-        setSelectedDate(d);
-        setCurrentMonthDate(d);
-        setSelectedTime(`${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`);
+      const isNewlyOpened = !prevIsOpenRef.current;
+      const isDifferentCarousel = prevCarouselIdRef.current !== carousel?.id;
+
+      if (isNewlyOpened || isDifferentCarousel) {
+        if (carousel?.slides?.length <= 1) {
+          setSelectedFormatId('instagram_post');
+        } else {
+          setSelectedFormatId('instagram_carousel');
+        }
+        setStatusMessage(null);
+        setChannelResults([]);
+        
+        if (carousel?.scheduledAt) {
+          const d = new Date(carousel.scheduledAt);
+          setSelectedDate(d);
+          setCurrentMonthDate(d);
+          setSelectedTime(`${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`);
+        }
       }
     }
-  }, [isOpen, carousel]);
+    prevIsOpenRef.current = isOpen;
+    prevCarouselIdRef.current = carousel?.id || null;
+  }, [isOpen, carousel?.id, carousel?.scheduledAt]);
 
   if (!isOpen) return null;
 
@@ -162,7 +172,7 @@ export const ExportModal: React.FC<ExportModalProps> = ({
   };
 
   // Publicar / Agendar via API Oficial do Buffer
-  const handlePublishBuffer = async (isScheduled: boolean = false) => {
+  const handlePublishBuffer = async (isScheduled: boolean = false, publishNow: boolean = false) => {
     if (!activeSlideElement) return;
     setChannelResults([]);
     try {
@@ -172,6 +182,8 @@ export const ExportModal: React.FC<ExportModalProps> = ({
       if (isScheduled) {
         const formattedDateStr = selectedDate.toLocaleDateString('pt-BR');
         setStatusMessage(`Agendando rascunho no Buffer para ${formattedDateStr} às ${selectedTime}...`);
+      } else if (publishNow) {
+        setStatusMessage(`Publicando imediatamente no Buffer (${activeChannels.map(c => c.toUpperCase()).join(', ')})...`);
       } else {
         setStatusMessage(`Renderizando ${allSlideElements.length || 1} slide(s)...`);
       }
@@ -207,6 +219,8 @@ export const ExportModal: React.FC<ExportModalProps> = ({
         {
           postType: currentFormat.postType,
           network: currentFormat.network,
+          isDraft: isScheduled, // Salva como rascunho quando agendado
+          publishNow: publishNow, // Publica imediatamente no botão "Publicar Agora"
         }
       );
 
@@ -218,14 +232,17 @@ export const ExportModal: React.FC<ExportModalProps> = ({
       if (res.success) {
         if (isScheduled && scheduledIso) {
           onScheduleCarousel?.(carousel.id, scheduledIso);
-          setStatusMessage(`✅ Conteúdo agendado com sucesso para ${selectedDate.toLocaleDateString('pt-BR')} às ${selectedTime}!`);
+          setStatusMessage(`✅ Conteúdo agendado como rascunho para ${selectedDate.toLocaleDateString('pt-BR')} às ${selectedTime}!`);
+        } else if (publishNow) {
+          onMarkAsSent?.('published');
+          setStatusMessage(`🚀 Conteúdo publicado com sucesso em todas as redes (${activeChannels.map(c => c.toUpperCase()).join(', ')})!`);
         } else {
-          onMarkAsSent?.();
+          onMarkAsSent?.('sent');
         }
       }
-    } catch (err) {
+    } catch (err: any) {
       console.error(err);
-      setStatusMessage('Erro ao comunicar com o Buffer.');
+      setStatusMessage(`⚠️ Erro ao comunicar com o Buffer: ${err?.message || 'Falha na requisição'}`);
     } finally {
       setIsPublishingBuffer(false);
     }
@@ -379,30 +396,46 @@ export const ExportModal: React.FC<ExportModalProps> = ({
 
         {/* MENSAGEM DE STATUS DA PUBLICAÇÃO */}
         {statusMessage && (
-          <div className="mb-4 p-3 bg-indigo-950/80 border border-indigo-500/40 rounded-xl text-indigo-200 text-xs font-medium flex flex-col gap-2 shadow-inner">
-            <div className="flex items-center gap-2">
-              <CheckCircle2 className="w-4 h-4 text-indigo-400 shrink-0" />
-              <span>{statusMessage}</span>
+          <div className={`mb-4 p-4 rounded-2xl text-xs font-medium flex flex-col gap-2.5 shadow-xl transition-all duration-300 animate-in fade-in zoom-in-95 ${
+            statusMessage.includes('Erro') || statusMessage.includes('Falha') || statusMessage.includes('⚠️')
+              ? 'bg-red-950/90 border border-red-500/50 text-red-200 shadow-red-950/50'
+              : 'bg-emerald-950/90 border border-emerald-500/60 text-emerald-200 shadow-emerald-950/50'
+          }`}>
+            <div className="flex items-center gap-3">
+              {statusMessage.includes('Erro') || statusMessage.includes('Falha') || statusMessage.includes('⚠️') ? (
+                <AlertCircle className="w-5 h-5 text-red-400 shrink-0" />
+              ) : (
+                <CheckCircle2 className="w-5 h-5 text-emerald-400 shrink-0" />
+              )}
+              <div className="flex flex-col gap-0.5">
+                <span className="font-extrabold text-sm text-white">{statusMessage}</span>
+                {!statusMessage.includes('Erro') && !statusMessage.includes('Falha') && !statusMessage.includes('⚠️') && (
+                  <span className="text-[11px] text-emerald-300/90 font-medium">
+                    Status atualizado no seu Dashboard com a tag <strong className="text-emerald-200">🚀 Publicado Imediato</strong>.
+                  </span>
+                )}
+              </div>
             </div>
 
             {/* RELATÓRIO INDIVIDUAL POR REDE SOCIAL */}
             {channelResults.length > 0 && (
-              <div className="flex flex-col gap-1.5 pt-2 border-t border-indigo-500/20">
+              <div className="flex flex-col gap-1.5 pt-2.5 border-t border-emerald-500/30">
+                <span className="text-[10px] uppercase font-bold tracking-wider text-emerald-400/90">Status de Envio por Canal:</span>
                 {channelResults.map((r, idx) => (
                   <div
                     key={idx}
-                    className={`p-2 rounded-lg text-xs font-semibold flex items-center justify-between ${
+                    className={`p-2.5 rounded-xl text-xs font-semibold flex items-center justify-between shadow-sm ${
                       r.success
-                        ? 'bg-emerald-950/60 border border-emerald-500/40 text-emerald-300'
-                        : 'bg-red-950/60 border border-red-500/40 text-red-300'
+                        ? 'bg-emerald-900/60 border border-emerald-500/40 text-emerald-200'
+                        : 'bg-red-900/60 border border-red-500/40 text-red-300'
                     }`}
                   >
-                    <div className="flex items-center gap-1.5">
-                      <span>{r.success ? '✅' : '⚠️'}</span>
-                      <span className="uppercase tracking-wider text-[11px] font-bold">{r.channel}</span>
-                      {r.channelName && <span className="text-[10px] text-slate-400">({r.channelName})</span>}
+                    <div className="flex items-center gap-2">
+                      <span className="text-sm">{r.success ? '✅' : '⚠️'}</span>
+                      <span className="uppercase tracking-wider text-xs font-extrabold text-white">{r.channel}</span>
+                      {r.channelName && <span className="text-[10px] text-emerald-300 font-normal">({r.channelName})</span>}
                     </div>
-                    <span className="text-[10px] truncate max-w-[200px]">{r.message}</span>
+                    <span className="text-[11px] font-semibold text-emerald-300 truncate max-w-[260px]" title={r.message}>{r.message}</span>
                   </div>
                 ))}
               </div>
@@ -546,7 +579,7 @@ export const ExportModal: React.FC<ExportModalProps> = ({
               </div>
 
               <button
-                onClick={() => handlePublishBuffer(true)}
+                onClick={() => handlePublishBuffer(true, false)}
                 disabled={isExportingZip || isExportingSingle || isSendingWebhook || isPublishingBuffer}
                 className="w-full bg-gradient-to-r from-purple-600 via-indigo-600 to-violet-600 hover:from-purple-500 hover:to-indigo-500 text-white p-3.5 rounded-xl shadow-glow font-bold text-xs flex items-center justify-center gap-2 transition disabled:opacity-50"
               >
@@ -565,18 +598,18 @@ export const ExportModal: React.FC<ExportModalProps> = ({
         {activeTab === 'now' && (
           <div className="flex flex-col gap-3">
             <button
-              onClick={() => handlePublishBuffer(false)}
+              onClick={() => handlePublishBuffer(false, true)}
               disabled={isExportingZip || isExportingSingle || isSendingWebhook || isPublishingBuffer}
               className="w-full bg-gradient-to-r from-indigo-600 via-violet-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 text-white p-4 rounded-xl shadow-glow font-semibold text-sm flex items-center justify-between transition disabled:opacity-50"
             >
               <div className="flex items-center gap-3 text-left">
                 <Share2 className="w-6 h-6 shrink-0 text-white" />
                 <div>
-                  <div className="font-bold flex items-center gap-1.5">
-                    🚀 Publicar Agora no Buffer
+                  <div className="font-bold flex items-center gap-1.5 text-base">
+                    🚀 Publicar Agora no Buffer (Imediato)
                   </div>
                   <div className="text-xs text-indigo-100 font-normal">
-                    Envia simultaneamente para: <strong className="font-bold text-white uppercase">{activeChannels.join(', ')}</strong>
+                    Publica imediatamente em todas as redes ativas: <strong className="font-bold text-white uppercase">{activeChannels.join(', ')}</strong>
                   </div>
                 </div>
               </div>

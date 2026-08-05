@@ -1,5 +1,5 @@
 import React from 'react';
-import { Slide, UserProfile } from '@/types/carousel';
+import { Slide, UserProfile, ImageMask } from '@/types/carousel';
 import { getSlideTheme } from '@/lib/themes';
 import { getTemplateSchema } from '@/templates/schemas/templatesRegistry';
 import { TemplateHeader } from './templates/TemplateHeader';
@@ -11,6 +11,7 @@ interface DynamicSlideRendererProps {
   slide: Slide;
   profile: UserProfile;
   onImageTransform?: (imageIndex: number, transform: { scale?: number; offsetX?: number; offsetY?: number }) => void;
+  onUpdateMasks?: (imageIndex: number, masks: ImageMask[]) => void;
   onAssignMedia?: (slideId: string, imageIndex: number, url: string) => void;
   onTextChange?: (textIndex: number, newContent: string) => void;
   onNewsTitleChange?: (newTitle: string) => void;
@@ -25,6 +26,7 @@ export const DynamicSlideRenderer: React.FC<DynamicSlideRendererProps> = ({
   slide,
   profile,
   onImageTransform,
+  onUpdateMasks,
   onAssignMedia,
   onTextChange,
   onNewsTitleChange,
@@ -312,6 +314,7 @@ export const DynamicSlideRenderer: React.FC<DynamicSlideRendererProps> = ({
             imageLayer={images[0]}
             imageIndex={0}
             onImageTransform={onImageTransform}
+            onUpdateMasks={onUpdateMasks}
             onAssignMedia={(idx, droppedUrl) => onAssignMedia?.(slide.id, idx, droppedUrl)}
             className="flex-1 min-h-0 w-full h-full group"
             cardBg={theme.cardBg}
@@ -341,6 +344,7 @@ export const DynamicSlideRenderer: React.FC<DynamicSlideRendererProps> = ({
                 imageLayer={images[0]}
                 imageIndex={0}
                 onImageTransform={onImageTransform}
+                onUpdateMasks={onUpdateMasks}
                 onAssignMedia={(idx, droppedUrl) => onAssignMedia?.(slide.id, idx, droppedUrl)}
                 className="flex-1 min-h-0 h-full w-full"
                 fallbackText="Imagem 1"
@@ -360,6 +364,7 @@ export const DynamicSlideRenderer: React.FC<DynamicSlideRendererProps> = ({
                 imageLayer={images[1]}
                 imageIndex={1}
                 onImageTransform={onImageTransform}
+                onUpdateMasks={onUpdateMasks}
                 onAssignMedia={(idx, droppedUrl) => onAssignMedia?.(slide.id, idx, droppedUrl)}
                 className="flex-1 min-h-0 h-full w-full"
                 fallbackText="Imagem 2"

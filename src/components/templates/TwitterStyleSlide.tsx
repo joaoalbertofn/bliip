@@ -1,5 +1,5 @@
 import React from 'react';
-import { Slide, UserProfile } from '@/types/carousel';
+import { Slide, UserProfile, ImageMask } from '@/types/carousel';
 import { TemplateHeader } from './TemplateHeader';
 import { getSlideTheme } from '@/lib/themes';
 import { InteractiveImageContainer } from '../InteractiveImageContainer';
@@ -8,10 +8,11 @@ interface TwitterStyleSlideProps {
   slide: Slide;
   profile: UserProfile;
   onImageTransform?: (imageIndex: number, transform: { scale?: number; offsetX?: number; offsetY?: number }) => void;
+  onUpdateMasks?: (imageIndex: number, masks: ImageMask[]) => void;
   onSelectImage?: (imageIndex: number) => void;
 }
 
-export const TwitterStyleSlide: React.FC<TwitterStyleSlideProps> = ({ slide, profile, onImageTransform, onSelectImage }) => {
+export const TwitterStyleSlide: React.FC<TwitterStyleSlideProps> = ({ slide, profile, onImageTransform, onUpdateMasks, onSelectImage }) => {
   const textLayer = slide.layers.text?.[0];
   const content = textLayer?.content || '';
   const images = slide.layers.images || [];
@@ -132,6 +133,7 @@ export const TwitterStyleSlide: React.FC<TwitterStyleSlideProps> = ({ slide, pro
                 imageLayer={images[0]}
                 imageIndex={0}
                 onImageTransform={onImageTransform}
+                onUpdateMasks={onUpdateMasks}
                 onSelect={onSelectImage}
                 className="flex-1 min-h-[240px] max-h-[650px] w-full group"
                 cardBg={theme.cardBg}
@@ -161,6 +163,7 @@ export const TwitterStyleSlide: React.FC<TwitterStyleSlideProps> = ({ slide, pro
                       imageLayer={images[0]}
                       imageIndex={0}
                       onImageTransform={onImageTransform}
+                      onUpdateMasks={onUpdateMasks}
                       onSelect={onSelectImage}
                       className="flex-1 min-h-[120px] w-full group"
                       fallbackText="Imagem 1"
@@ -180,6 +183,7 @@ export const TwitterStyleSlide: React.FC<TwitterStyleSlideProps> = ({ slide, pro
                       imageLayer={images[1]}
                       imageIndex={1}
                       onImageTransform={onImageTransform}
+                      onUpdateMasks={onUpdateMasks}
                       onSelect={onSelectImage}
                       className="flex-1 min-h-[120px] w-full group"
                       fallbackText="Imagem 2"

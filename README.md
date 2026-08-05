@@ -1,6 +1,6 @@
 # Bliip — Criador de Carrosséis, Vídeos e Posts para Instagram & Redes Sociais
 
-O **Bliip** é uma plataforma SaaS moderna para criação rápida, edição visual, geração de vídeos e agendamento de posts e carrosséis visuais para redes sociais (Instagram, LinkedIn, Facebook, YouTube Community, TikTok), inspirada nos estilos visuais de Bruno Perini e Sadhguru, com inteligência artificial integrada.
+O **Bliip** é uma plataforma SaaS moderna para criação rápida, edição visual, geração de vídeos verticais (Reels/TikTok/Shorts), agendamento de posts e carrosséis visuais para redes sociais (Instagram, LinkedIn, Facebook, YouTube Community, TikTok), inspirada nos estilos visuais de Bruno Perini e Sadhguru, com inteligência artificial integrada.
 
 ---
 
@@ -8,6 +8,9 @@ O **Bliip** é uma plataforma SaaS moderna para criação rápida, edição visu
 
 ### 🤖 Bliip IA Estrategista & Content Planner
 - **Geração Inteligente de Conteúdo**: Criação automática de roteiros de carrossel por IA (Google Gemini API).
+- **Gerador de Legendas Estratégicas por IA**:
+  - Geração de legendas para posts e vídeos orientadas a engajamento com seleção de tom de voz (Persuasivo, Educacional, Viral, Vendedor, Minimalista).
+  - Sugestão automática de ganchos de atração, chamadas para ação (CTAs) e hashtags estratégicas.
 - **Engenharia Reversa Narrativa & Visual em Tempo Real**:
   - Leitura dinâmica dos carrosséis salvos pelo próprio criador no estúdio para aprender e clonar o seu tom de voz, estrutura de ganchos, ritmo de slides e frequência de marca-texto (`<mark>`).
   - Geração de orientações práticas e diretas de **fotos pessoais recomendadas** (`imageDescription`) em cada slot de imagem (ex: *"[Foto recomendada: Print da tela do seu painel de vendas ou foto no computador]"*).
@@ -16,17 +19,25 @@ O **Bliip** é uma plataforma SaaS moderna para criação rápida, edição visu
 - **Padronização Visual Otimizada**: Posts e variações recomendadas no estilo visual **Twitter/X** por padrão para melhor aproveitamento do espaço em tela.
 - **Vínculo Dinâmico Chat ↔ Estúdio**: Preservação das edições feitas no estúdio quando o conteúdo é acessado pelo chat do planejador ou calendário.
 
+### 📱 Estúdio de Criação de Vídeos Verticais 9:16 (Reels / TikTok / Shorts)
+- **Canvas 9:16 Interativo (`VideoCanvas916`)**: Edição visual em proporção 9:16 com múltiplos elementos de texto flutuantes, overlays de marca, troca de fundo (vídeo/imagem) e animações.
+- **Timeline e Trimmer de Mídia (`VideoTimelineTrimmer`)**:
+  - Manipulação visual de alta precisão para corte de vídeos e áudios de fundo.
+  - Ajuste de tempo de exibição do Hook inicial (3s) e closed captions dinâmicos.
+- **Barra de Formatação Rápida (`VideoTextFormatToolbar`)**: Estilização inline de texto com marca-texto semântico, alinhamentos, fontes e cores.
+- **Preview em Tempo Real (`VideoSocialPostPreviewPanel`)**: Mockup ultra-realista simulando visualização no Instagram Reels, TikTok e YouTube Shorts.
+
 ### 🎨 Editor Visual de Carrosséis & Estilos
 - **Editor WYSIWYG de Canvas (`InlineCanvasEditor`)**: Edição direta de texto no próprio slide com suporte a realce em marca-texto (`<mark>`), negrito e tratamento de quebra de linhas inteligente.
 - **Formatos e Layouts Especiais**: Suporte a layouts Twitter/X Style, Immersive, Comparison e News Article.
 - **Temas Visuais & Paletas**: Temas predefinidos (Bruno Perini, Dark Minimal, High Contrast, Gradient, Vibrant Light, etc.).
 - **Marca-Texto Fluido, Purificado & Inteligente**: Formatação de destaques (`<mark>`) semânticos em linha sem blocos quadrados, sanitização defensiva contra vazamento de atributos Tailwind e remoção automática de tags vazias.
-- **Controles de Imagem, Zoom & Ações Flutuantes**:
+- **Controles de Enquadramento, Zoom & Ações Flutuantes (`InteractiveImageContainer`)**:
   - Menu flutuante posicionado no topo externo da foto ao selecioná-la.
-  - Zoom preciso (100% a 300%) com trava mínima em 1.0x para evitar bordas vazias.
+  - Zoom preciso (100% a 300%) e Pan (deslocamento X/Y via drag/touch).
   - Botões de **Reset de Enquadramento**, **📁 Trocar Imagem** e **🗑️ Remover Imagem**.
   - Ocultamento automático da barra de zoom ao clicar fora da imagem.
-- **Editor de Legenda Global**: Legenda unificada para o post com atalhos para emojis, hashtags e CTAs.
+- **Editor de Legenda Global**: Legenda unificada para o post com suporte a geração por IA, emojis, hashtags e CTAs.
 
 ### 🎬 Criadores de Conteúdo Multi-Formato
 - **📱 Criador de Vídeos Verticais (Reels / TikTok / Shorts)**: Suporte ao formato 9:16 com preview de timeline, editor de ganchos (Hook 3s) e closed captions dinâmicos.
@@ -44,11 +55,12 @@ O **Bliip** é uma plataforma SaaS moderna para criação rápida, edição visu
 - **Inserção e Reordenação Drag & Drop**: Arrasto fluido para reordenar slides ou inserir novas mídias.
 
 ### 📱 Previews Multi-plataforma em Tempo Real
-- Mockups interativos e fiéis ao visual final em 4 redes sociais:
-  - 📸 **Instagram** (Feed e Carrossel)
+- Mockups interativos e fiéis ao visual final nas principais redes sociais:
+  - 📸 **Instagram** (Feed, Carrossel e Reels)
+  - 🎵 **TikTok** (Vídeos Verticais 9:16)
+  - ▶️ **YouTube** (Community Posts e Shorts)
   - 💼 **LinkedIn** (Documento/Carrossel e Post)
   - 👥 **Facebook** (Postagem e Galeria)
-  - ▶️ **YouTube Community** (Post da Comunidade)
 
 ### 🗓️ Agendamento e Publicação Multi-canal (Buffer API)
 - **Integração com Buffer**: Conexão com contas sociais diretamente pela plataforma.
@@ -57,11 +69,11 @@ O **Bliip** é uma plataforma SaaS moderna para criação rápida, edição visu
 
 ### 📦 Exportação de Alta Qualidade
 - **Exportação em Lote (ZIP)**: Download de todos os slides do carrossel em imagens PNG/JPG organizadas em um arquivo `.zip`.
-- **Exportação Individual**: Download direto de slides específicos.
+- **Exportação Individual & Vídeos**: Download direto de slides e arquivos de mídia.
 
 ### 📂 Dashboard & Gerenciamento de Projetos
-- **Persistência Local Defensiva**: Armazenamento no navegador via IndexedDB (`idb-keyval`), garantindo autosave contínuo sem perda de rascunhos.
-- **Gerenciador de Projetos**: Criação, busca, filtragem por nicho, duplicação e exclusão.
+- **Persistência Local Defensiva**: Armazenamento no navegador via IndexedDB (`idb-keyval`), garantindo autosave contínuo de carrosséis e vídeos verticais.
+- **Gerenciador de Projetos Unificado**: Abas de navegação para separar Carrosséis de Vídeos Verticais, busca rápida, filtragem por nicho, duplicação e exclusão.
 - **Backup & Restore (JSON)**: Importação e exportação do estado completo de projetos para backup ou transferência.
 - **Biblioteca de Templates**: Possibilidade de salvar e reusar schemas de slides personalizados.
 
@@ -76,7 +88,7 @@ O **Bliip** é uma plataforma SaaS moderna para criação rápida, edição visu
 │ ⬅️ Slide Design (Esquerda)    │ 🎯 Content Workspace (Centro)                          │ ➡️ Social Post Preview (Direita)│
 │ [Recolhível]                  │                                                        │ [Recolhível]                 │
 │                               │ 🖼️ Canvas do Slide Selecionado (Inline Canvas Editor)   │ 🌐 Checkboxes de Redes       │
-│ • Estilo Visual & Tipo        │ 📝 Editor de Legenda Global (Lado a lado do Canvas)    │   (Instagram, LinkedIn, etc) │
+│ • Estilo Visual & Tipo        │ 📝 Editor de Legenda Global (Com Gerador IA Gemini)   │   (Instagram, LinkedIn, etc) │
 │ • Texto & Marca-Texto         │ 🎞️ Barra Inferior (Reordenação & Lixeira 1-Clique)     │                              │
 │ • Temas de Cores              │                                                        │ 📱 Lista de Previews         │
 │                               │                                                        │   Empilhados em Scroll       │
@@ -90,10 +102,10 @@ O **Bliip** é uma plataforma SaaS moderna para criação rápida, edição visu
 - **Next.js 14 (App Router)** — Framework React fullstack
 - **React 18 & TypeScript** — Interface dinâmica com tipagem estática
 - **Tailwind CSS & Lucide Icons** — Estilização moderna e conjunto de ícones
+- **Google Gemini API** — Inteligência artificial para geração estratégica de roteiros e legendas
 - **Web Speech API** — Reconhecimento nativo de voz em Português e Inglês
 - **Auth.js v5 (NextAuth.js)** — Autenticação de usuários com conta Google
 - **Buffer API (GraphQL & REST)** — Agendamento e publicação direta nas redes
-- **Google Gemini API** — Inteligência artificial para geração estratégica de conteúdo
 - **IndexedDB (`idb-keyval`)** — Armazenamento e persistência offline de projetos
 - **`html-to-image` & `jszip`** — Renderização de slides e exportação de imagens em lote
 
@@ -147,17 +159,18 @@ O **Bliip** é uma plataforma SaaS moderna para criação rápida, edição visu
 
 ```text
 src/
-├── app/                  # Rotas do Next.js App Router & Server Actions / APIs (/api/ai, /api/buffer, /api/lead-sync)
-├── components/           # Componentes React (Editor, Dashboard, Canvas, InlineCanvasEditor, Speech Input)
-│   ├── creators/         # Criadores de conteúdo multi-formato (Vídeos Verticais, Vídeos Longos, Stories)
+├── app/                  # Rotas do Next.js App Router & Server Actions / APIs (/api/ai, /api/ai/caption, /api/buffer)
+├── components/           # Componentes React (Editor, Dashboard, Canvas, InlineCanvasEditor, InteractiveImageContainer)
+│   ├── creators/         # Criadores de conteúdo multi-formato (Vídeos Verticais 9:16, Vídeos Longos, Stories)
 │   ├── modals/           # Modais de interface (Exportação, Compatibilidade de Mídia, etc)
-│   ├── previews/         # Mockups de pré-visualização (Instagram, LinkedIn, Facebook, YouTube)
-│   └── templates/        # Renderizadores visuais dos modelos de slides
+│   ├── previews/         # Mockups de pré-visualização (Instagram, TikTok, YouTube Shorts, LinkedIn, Facebook)
+│   ├── templates/        # Renderizadores visuais dos modelos de slides
+│   └── video/            # Componentes do Criador de Vídeo Vertical (Canvas 9:16, Timeline Trimmer, Controls, Toolbar)
 ├── domain/               # Regras de negócio puras (validações de legenda, slide e carrossel)
-├── hooks/                # Custom React Hooks (useCarouselState, useSpeechRecognition)
-├── lib/                  # Utilitários, storage (IndexedDB), contextExtractor, exportadores e adaptadores de publicação
+├── hooks/                # Custom React Hooks (useCarouselState, useVerticalVideoState, useSpeechRecognition)
+├── lib/                  # Utilitários, storage (IndexedDB), captionAI, contextExtractor e adaptadores de publicação
 │   ├── renderers/        # Motores de renderização de imagem (ImageRenderEngine) e vídeo (VideoRenderEngine)
 │   └── validators/       # Validadores de compatibilidade de mídias sociais (SocialMediaValidator)
 ├── templates/            # Schemas e registros de modelos de slide
-└── types/                # Definições de tipos TypeScript do domínio
+└── types/                # Definições de tipos TypeScript do domínio (carousel.ts, video.ts)
 ```

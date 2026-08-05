@@ -69,7 +69,9 @@ export class BufferPublisher implements PublishingAdapter {
             postType: 'carousel',
             network: channel,
             scheduledAt: payload.scheduledAt,
-            now: !payload.scheduledAt,
+            now: payload.publishNow ?? !payload.scheduledAt,
+            isDraft: payload.isDraft,
+            publishNow: payload.publishNow,
           }),
         });
 

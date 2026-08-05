@@ -179,9 +179,14 @@ export async function POST(req: NextRequest) {
       postType = 'carousel',
       network = 'instagram',
       scheduledAt,
+      isDraft,
+      publishNow = false,
     } = body;
 
     const rawToken = headerToken || bodyToken;
+
+    const shouldPublishNow = publishNow || body.now === true;
+    const isDraftPost = isDraft !== undefined ? isDraft : (scheduledAt ? true : false);
 
     console.log('[Buffer API POST] Recebida requisição:', {
       hasToken: !!rawToken,
@@ -192,6 +197,8 @@ export async function POST(req: NextRequest) {
       postType,
       network,
       scheduledAt,
+      shouldPublishNow,
+      isDraftPost,
       mediaUrlsCount: mediaUrls.length,
     });
 
@@ -269,7 +276,7 @@ async function uploadMediaToPublicUrl(mediaUrl: string): Promise<string> {
     return mediaUrl;
   }
 
-  // Se for Data URL (data:image/png;base64,...), faz upload para hospedar temporariamente
+  // Se for Data URL (data:image/png;base64,...), faz upload para CDN de alta velocidade (iili.io) aceita pelo crawler do Instagram
   if (mediaUrl.startsWith('data:image/')) {
     try {
       const match = mediaUrl.match(/^data:(image\/[a-zA-Z+]+);base64,(.+)$/);
@@ -279,22 +286,52 @@ async function uploadMediaToPublicUrl(mediaUrl: string): Promise<string> {
         const buffer = Buffer.from(base64Data, 'base64');
         const ext = mimeType.includes('jpeg') || mimeType.includes('jpg') ? 'jpg' : 'png';
 
-        const formData = new FormData();
-        formData.append('reqtype', 'fileupload');
-        formData.append('time', '24h');
-        formData.append('fileToUpload', new Blob([buffer], { type: mimeType }), `slide.${ext}`);
+        // Método 1: CDN Oficial freeimage.host (URLs iili.io com cabeçalho image/png e suporte ao crawler do Instagram)
+        try {
+          const fd = new FormData();
+          fd.append('key', '6d207e02198a847aa98d0a2a901485a5');
+          fd.append('action', 'upload');
+          fd.append('source', base64Data);
+          fd.append('format', 'json');
 
-        const res = await fetch('https://litterbox.catbox.moe/resources/internals/api.php', {
-          method: 'POST',
-          body: formData,
-        });
+          const res = await fetch('https://freeimage.host/api/1/upload', {
+            method: 'POST',
+            body: fd,
+          });
 
-        if (res.ok) {
-          const publicUrl = (await res.text()).trim();
-          if (publicUrl.startsWith('http')) {
-            console.log('[Buffer API Upload] Imagem convertida com sucesso para URL pública:', publicUrl);
-            return publicUrl;
+          if (res.ok) {
+            const data = await res.json();
+            const cdnUrl = data?.image?.url || data?.image?.display_url || data?.image?.image?.url;
+            if (cdnUrl && cdnUrl.startsWith('http')) {
+              console.log('[Buffer API Upload] Imagem convertida via CDN oficial (iili.io):', cdnUrl);
+              return cdnUrl;
+            }
           }
+        } catch (errCdn) {
+          console.warn('[Buffer API Upload] CDN iili.io falhou, tentando fallback Litterbox...', errCdn);
+        }
+
+        // Método 2: Fallback Litterbox
+        try {
+          const formData = new FormData();
+          formData.append('reqtype', 'fileupload');
+          formData.append('time', '24h');
+          formData.append('fileToUpload', new Blob([buffer], { type: mimeType }), `slide.${ext}`);
+
+          const res = await fetch('https://litterbox.catbox.moe/resources/internals/api.php', {
+            method: 'POST',
+            body: formData,
+          });
+
+          if (res.ok) {
+            const publicUrl = (await res.text()).trim();
+            if (publicUrl.startsWith('http')) {
+              console.log('[Buffer API Upload] Imagem convertida via Litterbox:', publicUrl);
+              return publicUrl;
+            }
+          }
+        } catch (errLitter) {
+          console.warn('[Buffer API Upload] Fallback Litterbox falhou:', errLitter);
         }
       }
     } catch (err) {
@@ -311,11 +348,13 @@ async function uploadMediaToPublicUrl(mediaUrl: string): Promise<string> {
       return NextResponse.json({ error: 'ID do perfil/canal do Buffer é obrigatório.' }, { status: 400 });
     }
 
-    // Converte todas as mídias (base64) em URLs HTTPS públicas acessíveis ao servidor do Buffer
+    // Converte todas as mídias (base64) em URLs HTTPS públicas de forma sequencial para estabilidade
     console.log(`[Buffer API POST] Convertendo ${mediaUrls.length} mídias para URLs públicas...`);
-    const publicMediaUrls = await Promise.all(
-      (mediaUrls || []).map((url: string) => uploadMediaToPublicUrl(url))
-    );
+    const publicMediaUrls: string[] = [];
+    for (const url of (mediaUrls || [])) {
+      const publicUrl = await uploadMediaToPublicUrl(url);
+      publicMediaUrls.push(publicUrl);
+    }
 
     // Monta o array de mídias/assets para o GraphQL do Buffer
     const assets = publicMediaUrls.map((url: string) => ({
@@ -371,8 +410,8 @@ async function uploadMediaToPublicUrl(mediaUrl: string): Promise<string> {
       channelId: profileId,
       text: text || 'Novo post criado via Bliip!',
       schedulingType: scheduledAt ? 'custom' : 'automatic',
-      mode: scheduledAt ? 'customScheduled' : 'addToQueue',
-      saveToDraft: true,
+      mode: scheduledAt ? 'customScheduled' : (shouldPublishNow ? 'shareNow' : 'addToQueue'),
+      saveToDraft: isDraftPost,
     };
 
     if (scheduledAt) {
@@ -453,10 +492,16 @@ async function uploadMediaToPublicUrl(mediaUrl: string): Promise<string> {
       const timestampSec = Math.floor(new Date(scheduledAt).getTime() / 1000);
       if (!isNaN(timestampSec)) {
         params.append('scheduled_at', timestampSec.toString());
-        params.append('as_draft', 'true');
+        if (isDraftPost) {
+          params.append('as_draft', 'true');
+        }
       } else {
         params.append('now', 'true');
       }
+    } else if (shouldPublishNow) {
+      params.append('now', 'true');
+    } else if (isDraftPost) {
+      params.append('as_draft', 'true');
     } else {
       params.append('now', 'true');
     }

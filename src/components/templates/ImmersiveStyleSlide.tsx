@@ -1,5 +1,5 @@
 import React from 'react';
-import { Slide, UserProfile } from '@/types/carousel';
+import { Slide, UserProfile, ImageMask } from '@/types/carousel';
 import { getSlideTheme } from '@/lib/themes';
 import { InteractiveImageContainer } from '../InteractiveImageContainer';
 
@@ -7,10 +7,11 @@ interface ImmersiveStyleSlideProps {
   slide: Slide;
   profile: UserProfile;
   onImageTransform?: (imageIndex: number, transform: { scale?: number; offsetX?: number; offsetY?: number }) => void;
+  onUpdateMasks?: (imageIndex: number, masks: ImageMask[]) => void;
   onSelectImage?: (imageIndex: number) => void;
 }
 
-export const ImmersiveStyleSlide: React.FC<ImmersiveStyleSlideProps> = ({ slide, profile, onImageTransform, onSelectImage }) => {
+export const ImmersiveStyleSlide: React.FC<ImmersiveStyleSlideProps> = ({ slide, profile, onImageTransform, onUpdateMasks, onSelectImage }) => {
   const quoteLayer = slide.layers.text?.find((t) => t.role === 'quote' || t.role === 'body');
   const signatureLayer = slide.layers.text?.find((t) => t.role === 'signature');
   const images = slide.layers.images || [];
@@ -120,6 +121,7 @@ export const ImmersiveStyleSlide: React.FC<ImmersiveStyleSlideProps> = ({ slide,
             imageLayer={images[0]}
             imageIndex={0}
             onImageTransform={onImageTransform}
+            onUpdateMasks={onUpdateMasks}
             onSelect={onSelectImage}
             className="w-full h-full rounded-none border-none group"
             cardBg="#0f172a"
@@ -132,6 +134,7 @@ export const ImmersiveStyleSlide: React.FC<ImmersiveStyleSlideProps> = ({ slide,
               imageLayer={images[0]}
               imageIndex={0}
               onImageTransform={onImageTransform}
+              onUpdateMasks={onUpdateMasks}
               onSelect={onSelectImage}
               className="flex-1 h-full rounded-none border-none group"
               fallbackText="Foto 1"
@@ -141,6 +144,7 @@ export const ImmersiveStyleSlide: React.FC<ImmersiveStyleSlideProps> = ({ slide,
               imageLayer={images[1]}
               imageIndex={1}
               onImageTransform={onImageTransform}
+              onUpdateMasks={onUpdateMasks}
               onSelect={onSelectImage}
               className="flex-1 h-full rounded-none border-none group"
               fallbackText="Foto 2"

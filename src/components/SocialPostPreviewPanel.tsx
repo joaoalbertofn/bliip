@@ -1,5 +1,6 @@
 import React from 'react';
-import { Carousel, UserProfile } from '@/types/carousel';
+import { Carousel, UserProfile, SocialChannel } from '@/types/carousel';
+import { PostCaptionEditor } from './PostCaptionEditor';
 import { InstagramMockupPreview } from './previews/InstagramMockupPreview';
 import { LinkedInMockupPreview } from './previews/LinkedInMockupPreview';
 import { FacebookMockupPreview } from './previews/FacebookMockupPreview';
@@ -15,8 +16,13 @@ import {
 interface SocialPostPreviewPanelProps {
   carousel: Carousel;
   profile: UserProfile;
-  selectedChannels: string[];
-  onToggleChannel: (channelId: any) => void;
+  selectedChannels: SocialChannel[];
+  connectedChannels?: SocialChannel[];
+  isBufferConnected?: boolean;
+  caption: string;
+  onCaptionChange: (caption: string) => void;
+  onToggleChannel: (channelId: SocialChannel) => void;
+  onOpenIntegrations?: () => void;
   isOpen: boolean;
   onToggleOpen: () => void;
 }
@@ -25,6 +31,12 @@ export const SocialPostPreviewPanel: React.FC<SocialPostPreviewPanelProps> = ({
   carousel,
   profile,
   selectedChannels,
+  connectedChannels = ['instagram', 'linkedin', 'facebook'],
+  isBufferConnected = true,
+  caption,
+  onCaptionChange,
+  onToggleChannel,
+  onOpenIntegrations,
   isOpen,
   onToggleOpen,
 }) => {
@@ -73,13 +85,28 @@ export const SocialPostPreviewPanel: React.FC<SocialPostPreviewPanelProps> = ({
         </span>
       </div>
 
+      {/* SEÇÃO FIXA: Redes Sociais de Destino & Legenda Global da Publicação */}
+      <div className="p-4 border-b border-slate-800/80 bg-slate-900 shrink-0">
+        <PostCaptionEditor
+          caption={caption}
+          selectedChannels={selectedChannels}
+          connectedChannels={connectedChannels}
+          isBufferConnected={isBufferConnected}
+          onCaptionChange={onCaptionChange}
+          onToggleChannel={onToggleChannel}
+          onOpenIntegrations={onOpenIntegrations}
+          carousel={carousel}
+          profile={profile}
+        />
+      </div>
+
       {/* Feed Vertical Empilhado de Mockups Realistas (Scrollable) */}
       <div className="flex-1 overflow-y-auto p-4 flex flex-col gap-6 scrollbar-thin scrollbar-thumb-slate-800">
         {selectedChannels.length === 0 ? (
           <div className="h-full flex flex-col items-center justify-center text-center p-6 text-slate-500 gap-2">
             <Eye className="w-8 h-8 text-slate-600 animate-pulse" />
             <p className="text-xs font-medium">Nenhuma rede ativa.</p>
-            <p className="text-[10px]">Ative os canais nas "Redes Sociais de Destino" no painel central.</p>
+            <p className="text-[10px]">Ative os canais nas "Redes Sociais de Destino" acima.</p>
           </div>
         ) : (
           selectedChannels.map((channelId) => {
@@ -141,3 +168,4 @@ export const SocialPostPreviewPanel: React.FC<SocialPostPreviewPanelProps> = ({
     </aside>
   );
 };
+

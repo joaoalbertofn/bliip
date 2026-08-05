@@ -20,6 +20,16 @@ export type VideoConfig = {
   loop?: boolean;
 };
 
+export type ImageMask = {
+  id: string;
+  x: number;       // Posição X em % (0 a 100)
+  y: number;       // Posição Y em % (0 a 100)
+  width: number;   // Largura em % (0 a 100)
+  height: number;  // Altura em % (0 a 100)
+  color: string;   // Cor de fundo da tarja (Hex/RGB/HSL)
+  borderRadius?: number;
+};
+
 export type ImageLayer = {
   id: string;
   source: ImageSource;
@@ -29,6 +39,7 @@ export type ImageLayer = {
   offsetX?: number;   // Deslocamento X em % (default: 0)
   offsetY?: number;   // Deslocamento Y em % (default: 0)
   videoConfig?: VideoConfig;
+  masks?: ImageMask[];
 };
 
 export type ContentType = "text_only" | "text_1_image" | "text_2_images";
@@ -84,7 +95,7 @@ export type Carousel = {
   slides: Slide[];
   createdAt: string;
   updatedAt: string;
-  status?: "draft" | "scheduled" | "sent";
+  status?: "draft" | "scheduled" | "sent" | "published";
   scheduledAt?: string; // Data e hora ISO de agendamento (ex: 2026-07-28T10:00:00.000Z)
   aspectRatio?: "4:5" | "1:1";
   mediaLibrary?: string[];

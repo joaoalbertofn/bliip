@@ -18,7 +18,8 @@ import {
   Sparkles,
   User,
   Webhook,
-  LogOut
+  LogOut,
+  Send
 } from 'lucide-react';
 
 interface DashboardProps {
@@ -46,7 +47,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
 }) => {
   const { data: session } = useSession();
   const [searchTerm, setSearchTerm] = useState('');
-  const [statusFilter, setStatusFilter] = useState<'all' | 'draft' | 'scheduled' | 'sent'>('all');
+  const [statusFilter, setStatusFilter] = useState<'all' | 'draft' | 'scheduled' | 'sent' | 'published'>('all');
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
 
   // Filtro de Busca e Status
@@ -56,6 +57,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
     if (statusFilter === 'draft') return matchesSearch && cStatus === 'draft';
     if (statusFilter === 'scheduled') return matchesSearch && cStatus === 'scheduled';
     if (statusFilter === 'sent') return matchesSearch && cStatus === 'sent';
+    if (statusFilter === 'published') return matchesSearch && cStatus === 'published';
     return matchesSearch;
   });
 
@@ -64,6 +66,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
   const draftCount = carousels.filter((c) => (c.status || 'draft') === 'draft').length;
   const scheduledCount = carousels.filter((c) => c.status === 'scheduled').length;
   const sentCount = carousels.filter((c) => c.status === 'sent').length;
+  const publishedCount = carousels.filter((c) => c.status === 'published').length;
 
   const carouselToDelete = carousels.find((c) => c.id === confirmDeleteId);
 
@@ -165,56 +168,65 @@ export const Dashboard: React.FC<DashboardProps> = ({
 
       {/* Conteúdo Principal do Dashboard */}
       <main className="flex-1 max-w-7xl w-full mx-auto p-6 flex flex-col gap-8">
-        {/* Banner de Estatísticas Rápidas */}
-        {/* Banner de Estatísticas Rápidas */}
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-          <div className="bg-slate-900/80 border border-slate-800 p-5 rounded-2xl flex items-center justify-between shadow-card">
+        {/* Banner de Estatísticas Rápidas (5 Cards) */}
+        <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
+          <div className="bg-slate-900/80 border border-slate-800 p-4 rounded-2xl flex items-center justify-between shadow-card">
             <div>
-              <span className="text-xs font-semibold text-slate-400">Total de Conteúdos</span>
-              <div className="text-2xl font-extrabold text-white mt-1">{totalCount}</div>
+              <span className="text-[11px] font-semibold text-slate-400">Total de Conteúdos</span>
+              <div className="text-xl font-extrabold text-white mt-0.5">{totalCount}</div>
             </div>
-            <div className="w-11 h-11 rounded-xl bg-indigo-500/10 border border-indigo-500/20 text-indigo-400 flex items-center justify-center">
-              <Folder className="w-5 h-5" />
+            <div className="w-9 h-9 rounded-xl bg-indigo-500/10 border border-indigo-500/20 text-indigo-400 flex items-center justify-center shrink-0">
+              <Folder className="w-4 h-4" />
             </div>
           </div>
 
-          <div className="bg-slate-900/80 border border-slate-800 p-5 rounded-2xl flex items-center justify-between shadow-card">
+          <div className="bg-slate-900/80 border border-slate-800 p-4 rounded-2xl flex items-center justify-between shadow-card">
             <div>
-              <span className="text-xs font-semibold text-slate-400">Rascunhos em Edição</span>
-              <div className="text-2xl font-extrabold text-amber-400 mt-1">{draftCount}</div>
+              <span className="text-[11px] font-semibold text-slate-400">Rascunhos Edição</span>
+              <div className="text-xl font-extrabold text-amber-400 mt-0.5">{draftCount}</div>
             </div>
-            <div className="w-11 h-11 rounded-xl bg-amber-500/10 border border-amber-500/20 text-amber-400 flex items-center justify-center">
-              <Clock className="w-5 h-5" />
+            <div className="w-9 h-9 rounded-xl bg-amber-500/10 border border-amber-500/20 text-amber-400 flex items-center justify-center shrink-0">
+              <Clock className="w-4 h-4" />
             </div>
           </div>
 
-          <div className="bg-slate-900/80 border border-slate-800 p-5 rounded-2xl flex items-center justify-between shadow-card">
+          <div className="bg-slate-900/80 border border-slate-800 p-4 rounded-2xl flex items-center justify-between shadow-card">
             <div>
-              <span className="text-xs font-semibold text-slate-400">Agendados no Calendário</span>
-              <div className="text-2xl font-extrabold text-purple-400 mt-1">{scheduledCount}</div>
+              <span className="text-[11px] font-semibold text-slate-400">Agendados</span>
+              <div className="text-xl font-extrabold text-purple-400 mt-0.5">{scheduledCount}</div>
             </div>
-            <div className="w-11 h-11 rounded-xl bg-purple-500/10 border border-purple-500/20 text-purple-400 flex items-center justify-center">
-              <Calendar className="w-5 h-5" />
+            <div className="w-9 h-9 rounded-xl bg-purple-500/10 border border-purple-500/20 text-purple-400 flex items-center justify-center shrink-0">
+              <Calendar className="w-4 h-4" />
             </div>
           </div>
 
-          <div className="bg-slate-900/80 border border-slate-800 p-5 rounded-2xl flex items-center justify-between shadow-card">
+          <div className="bg-slate-900/80 border border-slate-800 p-4 rounded-2xl flex items-center justify-between shadow-card">
             <div>
-              <span className="text-xs font-semibold text-slate-400">Enviados / Exportados</span>
-              <div className="text-2xl font-extrabold text-emerald-400 mt-1">{sentCount}</div>
+              <span className="text-[11px] font-semibold text-slate-400">Rascunhos Buffer</span>
+              <div className="text-xl font-extrabold text-blue-400 mt-0.5">{sentCount}</div>
             </div>
-            <div className="w-11 h-11 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 flex items-center justify-center">
-              <CheckCircle2 className="w-5 h-5" />
+            <div className="w-9 h-9 rounded-xl bg-blue-500/10 border border-blue-500/20 text-blue-400 flex items-center justify-center shrink-0">
+              <Send className="w-4 h-4" />
+            </div>
+          </div>
+
+          <div className="bg-slate-900/80 border border-slate-800 p-4 rounded-2xl flex items-center justify-between shadow-card col-span-2 md:col-span-1">
+            <div>
+              <span className="text-[11px] font-semibold text-slate-400">Publicados Imediatos</span>
+              <div className="text-xl font-extrabold text-emerald-400 mt-0.5">{publishedCount}</div>
+            </div>
+            <div className="w-9 h-9 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 flex items-center justify-center shrink-0">
+              <CheckCircle2 className="w-4 h-4" />
             </div>
           </div>
         </div>
 
         {/* Barra de Filtros por Aba */}
         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 border-b border-slate-800 pb-4">
-          <div className="flex items-center gap-2 bg-slate-900 p-1 rounded-xl border border-slate-800 flex-wrap">
+          <div className="flex items-center gap-1.5 bg-slate-900 p-1 rounded-xl border border-slate-800 flex-wrap">
             <button
               onClick={() => setStatusFilter('all')}
-              className={`px-4 py-2 text-xs font-bold rounded-lg transition ${
+              className={`px-3 py-1.5 text-xs font-bold rounded-lg transition ${
                 statusFilter === 'all'
                   ? 'bg-indigo-600 text-white shadow-sm'
                   : 'text-slate-400 hover:text-slate-200'
@@ -223,37 +235,48 @@ export const Dashboard: React.FC<DashboardProps> = ({
               Todos ({totalCount})
             </button>
             <button
-              onClick={() => setStatusFilter('draft')}
-              className={`px-4 py-2 text-xs font-bold rounded-lg transition flex items-center gap-1.5 ${
-                statusFilter === 'draft'
-                  ? 'bg-amber-600 text-white shadow-sm'
+              onClick={() => setStatusFilter('published')}
+              className={`px-3 py-1.5 text-xs font-bold rounded-lg transition flex items-center gap-1.5 ${
+                statusFilter === 'published'
+                  ? 'bg-emerald-600 text-white shadow-sm'
                   : 'text-slate-400 hover:text-slate-200'
               }`}
             >
-              <span className="w-2 h-2 rounded-full bg-amber-400" />
-              <span>Rascunhos ({draftCount})</span>
+              <span className="w-2 h-2 rounded-full bg-emerald-400" />
+              <span>🚀 Publicados ({publishedCount})</span>
+            </button>
+            <button
+              onClick={() => setStatusFilter('sent')}
+              className={`px-3 py-1.5 text-xs font-bold rounded-lg transition flex items-center gap-1.5 ${
+                statusFilter === 'sent'
+                  ? 'bg-blue-600 text-white shadow-sm'
+                  : 'text-slate-400 hover:text-slate-200'
+              }`}
+            >
+              <span className="w-2 h-2 rounded-full bg-blue-400" />
+              <span>📝 Rascunhos Buffer ({sentCount})</span>
             </button>
             <button
               onClick={() => setStatusFilter('scheduled')}
-              className={`px-4 py-2 text-xs font-bold rounded-lg transition flex items-center gap-1.5 ${
+              className={`px-3 py-1.5 text-xs font-bold rounded-lg transition flex items-center gap-1.5 ${
                 statusFilter === 'scheduled'
                   ? 'bg-purple-600 text-white shadow-sm'
                   : 'text-slate-400 hover:text-slate-200'
               }`}
             >
               <span className="w-2 h-2 rounded-full bg-purple-400" />
-              <span>Agendados ({scheduledCount})</span>
+              <span>🗓️ Agendados ({scheduledCount})</span>
             </button>
             <button
-              onClick={() => setStatusFilter('sent')}
-              className={`px-4 py-2 text-xs font-bold rounded-lg transition flex items-center gap-1.5 ${
-                statusFilter === 'sent'
-                  ? 'bg-emerald-600 text-white shadow-sm'
+              onClick={() => setStatusFilter('draft')}
+              className={`px-3 py-1.5 text-xs font-bold rounded-lg transition flex items-center gap-1.5 ${
+                statusFilter === 'draft'
+                  ? 'bg-amber-600 text-white shadow-sm'
                   : 'text-slate-400 hover:text-slate-200'
               }`}
             >
-              <span className="w-2 h-2 rounded-full bg-emerald-400" />
-              <span>Enviados ({sentCount})</span>
+              <span className="w-2 h-2 rounded-full bg-amber-400" />
+              <span>⏳ Edição ({draftCount})</span>
             </button>
           </div>
 
@@ -283,6 +306,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {filteredCarousels.map((carousel) => {
+              const isPublished = carousel.status === 'published';
               const isSent = carousel.status === 'sent';
               const isScheduled = carousel.status === 'scheduled';
               const firstSlide = carousel.slides[0];
@@ -311,10 +335,15 @@ export const Dashboard: React.FC<DashboardProps> = ({
 
                     {/* Tag de Status no canto superior do Card */}
                     <div className="absolute top-3 right-3 z-10">
-                      {isSent ? (
-                        <span className="px-2.5 py-1 rounded-full text-[10px] font-extrabold bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 flex items-center gap-1 shadow-sm">
+                      {isPublished ? (
+                        <span className="px-2.5 py-1 rounded-full text-[10px] font-extrabold bg-emerald-500/25 text-emerald-300 border border-emerald-500/40 flex items-center gap-1 shadow-glow">
                           <CheckCircle2 className="w-3 h-3 text-emerald-400" />
-                          <span>Enviado / Exportado</span>
+                          <span>🚀 Publicado Imediato</span>
+                        </span>
+                      ) : isSent ? (
+                        <span className="px-2.5 py-1 rounded-full text-[10px] font-extrabold bg-blue-500/20 text-blue-300 border border-blue-500/40 flex items-center gap-1 shadow-sm">
+                          <Send className="w-3 h-3 text-blue-400" />
+                          <span>📝 Rascunho Buffer</span>
                         </span>
                       ) : isScheduled ? (
                         <button
@@ -331,7 +360,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
                       ) : (
                         <span className="px-2.5 py-1 rounded-full text-[10px] font-extrabold bg-amber-500/20 text-amber-300 border border-amber-500/40 flex items-center gap-1 shadow-sm">
                           <Clock className="w-3 h-3 text-amber-400" />
-                          <span>Rascunho</span>
+                          <span>⏳ Rascunho Edição</span>
                         </span>
                       )}
                     </div>

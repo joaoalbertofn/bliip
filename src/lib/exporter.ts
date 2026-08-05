@@ -3,11 +3,11 @@ import JSZip from 'jszip';
 import { Carousel, IntegrationConfig, UserProfile } from '@/types/carousel';
 
 export async function exportElementToPng(element: HTMLElement, filename: string): Promise<string> {
-  // Configurações para captura em Ultra Alta Definição (1380x1725px em 3x pixel ratio)
-  // Garante nitidez máxima das letras em telas Retina/Instagram 4K sem qualquer desfoque
+  // Configurações para captura em Resolução Nativa HD 1080p (920x1150px em 2x pixel ratio)
+  // Garante proporção de aspecto exata de 0.8000 (4:5) aceita pela API do Instagram/Meta
   const dataUrl = await toPng(element, {
-    quality: 1.0,
-    pixelRatio: 3, // 460x575 @ 3x = 1380x1725px (Supera o 1080x1350 nativo do Instagram)
+    quality: 0.95,
+    pixelRatio: 2, // 460x575 @ 2x = 920x1150px (Proporção 4:5 = 0.8000 exata)
     cacheBust: true,
     style: {
       transform: 'scale(1)',
@@ -118,6 +118,8 @@ export async function publishToBufferApi(
   options?: {
     postType?: string;
     network?: string;
+    isDraft?: boolean;
+    publishNow?: boolean;
   }
 ): Promise<PublishResult> {
   const publisher = PublisherRegistry.getPublisher('buffer');
@@ -132,6 +134,9 @@ export async function publishToBufferApi(
     caption: carousel.caption || '',
     mediaUrls: mediaUrls,
     targetChannels: carousel.selectedChannels || ['instagram', 'linkedin'],
+    scheduledAt: carousel.scheduledAt,
+    isDraft: options?.isDraft,
+    publishNow: options?.publishNow,
   };
 
   return publisher.publish(payload, config);

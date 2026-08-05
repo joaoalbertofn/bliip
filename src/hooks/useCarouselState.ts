@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Carousel, Slide, UserProfile, ImageSource, ContentType, LayoutStyle, SocialChannel, SavedSlideTemplate, PlannedContentIdea } from '@/types/carousel';
+import { Carousel, Slide, UserProfile, ImageSource, ImageMask, ContentType, LayoutStyle, SocialChannel, SavedSlideTemplate, PlannedContentIdea } from '@/types/carousel';
 import { loadCarousels, saveCarousels, loadUserPreferences, saveUserPreferences, DEFAULT_USER_PREFERENCES, loadSavedSlideTemplates, saveSavedSlideTemplates, loadPlannedContentIdeas, savePlannedContentIdeas, loadChatHistory, saveChatHistory } from '@/lib/storage';
 import { createSlide, formatSmartSlideText, detectComparisonLabels } from '@/lib/templates';
 import { DEFAULT_STUDENT_FRAMEWORKS } from '@/config/defaultContent';
@@ -7,67 +7,72 @@ import { PRESET_MODELS } from '@/config/presetModels';
 import { SlideTheme, SLIDE_THEMES } from '@/lib/themes';
 import { validateFontSize, canDeleteSlide, canAddSlide } from '@/domain';
 
+function buildDefaultDemoCarousel(userName: string = 'João Alberto'): Carousel {
+  const s1 = createSlide('text_1_image', 'news_article');
+  const s2 = createSlide('text_2_images', 'comparison');
+  const s3 = createSlide('text_only', 'immersive');
+  const s4 = createSlide('text_1_image', 'twitter');
+
+  const s5 = createSlide('text_only', 'immersive');
+  s5.layers.text = [
+    { id: 't5_q', role: 'quote', content: DEFAULT_STUDENT_FRAMEWORKS.immersiveQuotes[0].quote },
+    { id: 't5_s', role: 'signature', content: DEFAULT_STUDENT_FRAMEWORKS.immersiveQuotes[0].signature || userName }
+  ];
+
+  const s6 = createSlide('text_only', 'immersive');
+  s6.background = '#0f172a';
+  s6.layers.text = [
+    { id: 't6_q', role: 'quote', content: DEFAULT_STUDENT_FRAMEWORKS.immersiveQuotes[1].quote },
+    { id: 't6_s', role: 'signature', content: DEFAULT_STUDENT_FRAMEWORKS.immersiveQuotes[1].signature || userName }
+  ];
+
+  const s7 = createSlide('text_only', 'immersive');
+  s7.layers.text = [
+    { id: 't7_q', role: 'quote', content: DEFAULT_STUDENT_FRAMEWORKS.immersiveQuotes[2].quote },
+    { id: 't7_s', role: 'signature', content: DEFAULT_STUDENT_FRAMEWORKS.immersiveQuotes[2].signature || userName }
+  ];
+
+  const s8 = createSlide('text_only', 'immersive');
+  s8.layers.text = [
+    { id: 't8_q', role: 'quote', content: DEFAULT_STUDENT_FRAMEWORKS.immersiveQuotes[3].quote },
+    { id: 't8_s', role: 'signature', content: DEFAULT_STUDENT_FRAMEWORKS.immersiveQuotes[3].signature || userName }
+  ];
+
+  return {
+    id: 'demo_carousel_default',
+    name: 'Frameworks de Autoridade e Vendas (Exemplo para Alunos)',
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+    status: 'draft',
+    aspectRatio: '4:5',
+    slides: [s1, s2, s3, s4, s5, s6, s7, s8]
+  };
+}
+
 export function useCarouselState(profile: UserProfile) {
-  const [carousels, setCarousels] = useState<Carousel[]>([]);
-  const [activeCarouselId, setActiveCarouselId] = useState<string>('');
+  const [initialDemo] = useState<Carousel>(() => buildDefaultDemoCarousel(profile?.name));
+  const [carousels, setCarousels] = useState<Carousel[]>([initialDemo]);
+  const [activeCarouselId, setActiveCarouselId] = useState<string>(initialDemo.id);
   const [activeSlideIndex, setActiveSlideIndex] = useState<number>(0);
   const [isSaving, setIsSaving] = useState(false);
 
-  // 1. Carregar dados iniciais ou criar carrossel de demonstração (Frameworks de Conteúdo para Alunos)
+  // 1. Carregar dados iniciais ou manter carrossel de demonstração
   useEffect(() => {
     async function initData() {
-      const savedCarousels = await loadCarousels();
-      if (savedCarousels.length > 0) {
-        setCarousels(savedCarousels);
-        setActiveCarouselId(savedCarousels[0].id);
-      } else {
-        // Criar Carrossel Inicial Didático com Suíte Completa de Formatos (8 Slides)
-        const s1 = createSlide('text_1_image', 'news_article');
-        const s2 = createSlide('text_2_images', 'comparison');
-        const s3 = createSlide('text_only', 'immersive');
-        const s4 = createSlide('text_1_image', 'twitter');
-
-        const s5 = createSlide('text_only', 'immersive');
-        s5.layers.text = [
-          { id: 't5_q', role: 'quote', content: DEFAULT_STUDENT_FRAMEWORKS.immersiveQuotes[0].quote },
-          { id: 't5_s', role: 'signature', content: DEFAULT_STUDENT_FRAMEWORKS.immersiveQuotes[0].signature || profile.name }
-        ];
-
-        const s6 = createSlide('text_only', 'immersive');
-        s6.background = '#0f172a';
-        s6.layers.text = [
-          { id: 't6_q', role: 'quote', content: DEFAULT_STUDENT_FRAMEWORKS.immersiveQuotes[1].quote },
-          { id: 't6_s', role: 'signature', content: DEFAULT_STUDENT_FRAMEWORKS.immersiveQuotes[1].signature || profile.name }
-        ];
-
-        const s7 = createSlide('text_only', 'immersive');
-        s7.layers.text = [
-          { id: 't7_q', role: 'quote', content: DEFAULT_STUDENT_FRAMEWORKS.immersiveQuotes[2].quote },
-          { id: 't7_s', role: 'signature', content: DEFAULT_STUDENT_FRAMEWORKS.immersiveQuotes[2].signature || profile.name }
-        ];
-
-        const s8 = createSlide('text_only', 'immersive');
-        s8.layers.text = [
-          { id: 't8_q', role: 'quote', content: DEFAULT_STUDENT_FRAMEWORKS.immersiveQuotes[3].quote },
-          { id: 't8_s', role: 'signature', content: DEFAULT_STUDENT_FRAMEWORKS.immersiveQuotes[3].signature || profile.name }
-        ];
-
-        const demoCarousel: Carousel = {
-          id: `carousel_${Date.now()}`,
-          name: 'Frameworks de Autoridade e Vendas (Exemplo para Alunos)',
-          createdAt: new Date().toISOString(),
-          updatedAt: new Date().toISOString(),
-          status: 'draft',
-          aspectRatio: '4:5',
-          slides: [s1, s2, s3, s4, s5, s6, s7, s8]
-        };
-        setCarousels([demoCarousel]);
-        setActiveCarouselId(demoCarousel.id);
-        await saveCarousels([demoCarousel]);
+      try {
+        const savedCarousels = await loadCarousels();
+        if (savedCarousels.length > 0) {
+          setCarousels(savedCarousels);
+          setActiveCarouselId(savedCarousels[0].id);
+        } else {
+          await saveCarousels([initialDemo]);
+        }
+      } catch (err) {
+        console.warn('Erro ao carregar dados no IndexedDB:', err);
       }
     }
     initData();
-  }, []);
+  }, [initialDemo]);
 
   const [savedSlideTemplates, setSavedSlideTemplates] = useState<SavedSlideTemplate[]>([]);
 
@@ -263,9 +268,9 @@ export function useCarouselState(profile: UserProfile) {
     }
   };
 
-  const handleMarkAsSent = () => {
+  const handleMarkAsSent = (statusTarget: 'sent' | 'published' = 'sent') => {
     if (!activeCarousel) return;
-    const updated = carousels.map((c) => (c.id === activeCarousel.id ? { ...c, status: 'sent' as const } : c));
+    const updated = carousels.map((c) => (c.id === activeCarousel.id ? { ...c, status: statusTarget } : c));
     saveCurrentCarouselsState(updated);
   };
 
@@ -473,6 +478,33 @@ export function useCarouselState(profile: UserProfile) {
         scale: transform.scale !== undefined ? transform.scale : (currentImg.scale ?? 1),
         offsetX: transform.offsetX !== undefined ? transform.offsetX : (currentImg.offsetX ?? 0),
         offsetY: transform.offsetY !== undefined ? transform.offsetY : (currentImg.offsetY ?? 0),
+      };
+
+      return {
+        ...prev,
+        layers: { ...prev.layers, images },
+      };
+    });
+  };
+
+  const handleUpdateImageMasks = (imageIndex: number, masks: ImageMask[]) => {
+    updateActiveSlide((prev) => {
+      const images = [...(prev.layers?.images || [])];
+      while (images.length <= imageIndex) {
+        images.push({
+          id: `img_${Date.now()}_${images.length}`,
+          position: 'center',
+          source: { type: 'upload', url: '' },
+          scale: 1,
+          offsetX: 0,
+          offsetY: 0,
+        });
+      }
+
+      const currentImg = images[imageIndex];
+      images[imageIndex] = {
+        ...currentImg,
+        masks,
       };
 
       return {
@@ -900,6 +932,7 @@ export function useCarouselState(profile: UserProfile) {
     handleSignatureChange,
     handleImageUpload,
     handleImageTransform,
+    handleUpdateImageMasks,
     handleThemeChange,
     handleBackgroundChange,
     handleFontSizeChange,
