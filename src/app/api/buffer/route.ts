@@ -276,7 +276,7 @@ async function uploadMediaToPublicUrl(mediaUrl: string): Promise<string> {
     return mediaUrl;
   }
 
-  // Se for Data URL (data:image/png;base64,...), faz upload para CDN de alta velocidade (iili.io) aceita pelo crawler do Instagram
+  // Se for Data URL (data:image/png;base64,...), faz upload para CDN de alta velocidade aceita pelo crawler do Instagram/LinkedIn
   if (mediaUrl.startsWith('data:image/')) {
     try {
       const match = mediaUrl.match(/^data:(image\/[a-zA-Z+]+);base64,(.+)$/);
@@ -286,32 +286,7 @@ async function uploadMediaToPublicUrl(mediaUrl: string): Promise<string> {
         const buffer = Buffer.from(base64Data, 'base64');
         const ext = mimeType.includes('jpeg') || mimeType.includes('jpg') ? 'jpg' : 'png';
 
-        // Método 1: CDN Oficial freeimage.host (URLs iili.io com cabeçalho image/png e suporte ao crawler do Instagram)
-        try {
-          const fd = new FormData();
-          fd.append('key', '6d207e02198a847aa98d0a2a901485a5');
-          fd.append('action', 'upload');
-          fd.append('source', base64Data);
-          fd.append('format', 'json');
-
-          const res = await fetch('https://freeimage.host/api/1/upload', {
-            method: 'POST',
-            body: fd,
-          });
-
-          if (res.ok) {
-            const data = await res.json();
-            const cdnUrl = data?.image?.url || data?.image?.display_url || data?.image?.image?.url;
-            if (cdnUrl && cdnUrl.startsWith('http')) {
-              console.log('[Buffer API Upload] Imagem convertida via CDN oficial (iili.io):', cdnUrl);
-              return cdnUrl;
-            }
-          }
-        } catch (errCdn) {
-          console.warn('[Buffer API Upload] CDN iili.io falhou, tentando fallback Litterbox...', errCdn);
-        }
-
-        // Método 2: Fallback Litterbox
+        // Método 1: Litterbox (Catbox 24h temp upload)
         try {
           const formData = new FormData();
           formData.append('reqtype', 'fileupload');
@@ -331,7 +306,29 @@ async function uploadMediaToPublicUrl(mediaUrl: string): Promise<string> {
             }
           }
         } catch (errLitter) {
-          console.warn('[Buffer API Upload] Fallback Litterbox falhou:', errLitter);
+          console.warn('[Buffer API Upload] Litterbox falhou, tentando fallback tmpfiles.org...', errLitter);
+        }
+
+        // Método 2: Fallback tmpfiles.org
+        try {
+          const formData = new FormData();
+          formData.append('file', new Blob([buffer], { type: mimeType }), `slide.${ext}`);
+
+          const res = await fetch('https://tmpfiles.org/api/v1/upload', {
+            method: 'POST',
+            body: formData,
+          });
+
+          if (res.ok) {
+            const data = await res.json();
+            if (data.data?.url) {
+              const directUrl = data.data.url.replace('tmpfiles.org/', 'tmpfiles.org/dl/');
+              console.log('[Buffer API Upload] Imagem convertida via tmpfiles.org:', directUrl);
+              return directUrl;
+            }
+          }
+        } catch (errTmp) {
+          console.warn('[Buffer API Upload] Fallback tmpfiles.org falhou:', errTmp);
         }
       }
     } catch (err) {

@@ -15,7 +15,39 @@ export class BufferPublisher implements PublishingAdapter {
       ? payload.caption
       : `${payload.carouselName}\n\nPost criado via Bliip Studio`;
 
-    // 1. Busca os perfis/canais realmente conectados no Buffer para obter os IDs de cada rede
+    // 1. Converte imagens em formato base64 para URLs HTTPS públicas leves via /api/buffer/upload
+    // Isso reduz o payload de ~16MB para ~1.5KB, evitando o limite de 4.5MB da Vercel
+    const publicMediaUrls: string[] = [];
+    if (payload.mediaUrls && payload.mediaUrls.length > 0) {
+      for (const mediaItem of payload.mediaUrls) {
+        if (mediaItem.startsWith('http://') || mediaItem.startsWith('https://')) {
+          publicMediaUrls.push(mediaItem);
+        } else if (mediaItem.startsWith('data:image/')) {
+          try {
+            const uploadRes = await fetch('/api/buffer/upload', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ image: mediaItem }),
+            });
+            if (uploadRes.ok) {
+              const uploadData = await uploadRes.json();
+              if (uploadData.url) {
+                publicMediaUrls.push(uploadData.url);
+                continue;
+              }
+            }
+          } catch (uploadErr) {
+            console.warn('[BufferPublisher] Falha ao fazer upload de slide individual:', uploadErr);
+          }
+          // Fallback: se falhar o upload individual, mantém o item original
+          publicMediaUrls.push(mediaItem);
+        } else {
+          publicMediaUrls.push(mediaItem);
+        }
+      }
+    }
+
+    // 2. Busca os perfis/canais realmente conectados no Buffer para obter os IDs de cada rede
     let bufferProfiles: any[] = [];
     try {
       const getRes = await fetch('/api/buffer', {
@@ -65,7 +97,7 @@ export class BufferPublisher implements PublishingAdapter {
           body: JSON.stringify({
             profileId,
             text,
-            mediaUrls: payload.mediaUrls,
+            mediaUrls: publicMediaUrls,
             postType: 'carousel',
             network: channel,
             scheduledAt: payload.scheduledAt,
@@ -75,7 +107,19 @@ export class BufferPublisher implements PublishingAdapter {
           }),
         });
 
-        const data = await res.json();
+        const contentType = res.headers.get('content-type') || '';
+        let data: any = {};
+        if (contentType.includes('application/json')) {
+          data = await res.json();
+        } else {
+          const rawText = await res.text();
+          return {
+            channel,
+            channelName,
+            success: false,
+            message: `Erro no servidor (HTTP ${res.status}): ${rawText.substring(0, 100)}`,
+          };
+        }
 
         if (res.ok && data.success) {
           return {
