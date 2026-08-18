@@ -76,6 +76,8 @@ ${historySection}
 
 3. REGRA TÉCNICA OBRIGATÓRIA PARA CARDS ARRASTÁVEIS (JSON_PLAN):
    Sempre que você gerar sugestões de criação de conteúdo/slides, inclua OBRIGATORIAMENTE no FINAL da sua resposta o bloco em código demarcado como \`\`\`json_plan ... \`\`\` contendo o array estruturado de TODAS as variações geradas.
+   REGRA ABSOLUTA DE LEGENDA: Cada variação DEVE OBRIGATORIAMENTE conter o campo "caption" preenchido com a LEGENDA GLOBAL COMPLETA para postagem (incluindo linha 1 com gancho de atenção forte baseado no Slide 1, transição, tópicos/marcadores e rodapé com CTA e 5 hashtags estratégicas). NUNCA deixe a "caption" vazia ou nula.
+   REGRA DE ANTES E DEPOIS / 2 IMAGENS: Quando o usuário pedir no prompt "antes e depois", "duas fotos minhas", "transformação" ou "comparação", você DEVE OBRIGATORIAMENTE definir "contentType": "text_2_images" no slide correspondente (especialmente no Slide 1 se solicitado) e "recommendedStyle": "comparison". Em "imageDescription", especifique as duas imagens (ex: "Fotos recomendadas: Imagem 1 (Sua foto com 15 anos) e Imagem 2 (Sua foto atual)").
 
 FORMATO DO BLOCO JSON_PLAN:
 \`\`\`json_plan
@@ -86,7 +88,7 @@ FORMATO DO BLOCO JSON_PLAN:
     "description": "Storytelling de Vendas • Fundo de Funil",
     "recommendedStyle": "twitter",
     "recommendedSlideCount": 4,
-    "caption": "Qual conteúdo realmente gera clientes pagantes sem precisar virar escravo do Instagram?...",
+    "caption": "Como saber se o seu conteúdo gera valor de verdade e vendas reais?\n\nA resposta é simples: basta olhar para a sua caixa de mensagens ou comentários.\n\nSe você percebe:\n- Gratidão genuína de quem leu;\n- Desejo explícito de trabalhar com você;\n- Perguntas diretas sobre como contratar sua solução...\n\nEntão sim! Seu conteúdo está gerando autoridade. Comente 'BLIIP' para receber o guia completo no direct.\n\n#marketingdeconteudo #criadordeconteudo #vendasnoinstagram #estrategiadeconteudo #infoprodutos",
     "slidesContent": [
       {
         "title": "Gancho",
@@ -119,7 +121,7 @@ Estilos válidos: "twitter" (padrão principal), "comparison", "news_article", "
 
     // Se o usuário definiu um prompt customizado no perfil, utiliza ele com a injeção do contexto do negócio
     const systemPrompt = businessProfile?.customSystemPrompt && businessProfile.customSystemPrompt.trim() !== ''
-      ? `${businessProfile.customSystemPrompt}\n\nCONTEXTO DO NEGÓCIO:\n- Nome: ${userProfile?.name}\n- Nicho: ${businessProfile.niche}\n- Método: ${businessProfile.methodOrToolName}\n\nREGRA TÉCNICA DE AGENDAMENTO:\nSempre que entregar sugestões de posts, inclua no final o bloco \`\`\`json_plan [...] \`\`\` com a lista de posts.`
+      ? `${businessProfile.customSystemPrompt}\n\nCONTEXTO DO NEGÓCIO:\n- Nome: ${userProfile?.name}\n- Nicho: ${businessProfile.niche}\n- Método: ${businessProfile.methodOrToolName}\n\nREGRA TÉCNICA DE AGENDAMENTO:\nSempre que entregar sugestões de posts, inclua no final o bloco \`\`\`json_plan [...] \`\`\` com a lista de posts e o campo "caption" preenchido com a legenda global completa do post em cada variação.`
       : defaultSystemPrompt;
 
 

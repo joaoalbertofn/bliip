@@ -110,24 +110,25 @@ export const TwitterStyleSlide: React.FC<TwitterStyleSlideProps> = ({ slide, pro
 
   return (
     <div
-      className="w-full h-full flex flex-col justify-between p-6 transition-colors duration-200"
+      className="w-full h-full flex flex-col justify-between transition-colors duration-200 overflow-hidden relative"
       style={{ backgroundColor: theme.bg }}
     >
       {isTextOnly ? (
-        <div className="my-auto flex flex-col justify-center w-full max-w-lg mx-auto py-4">
+        <div className="my-auto flex flex-col justify-center w-full max-w-lg mx-auto p-6">
           <TemplateHeader profile={profile} themeConfig={theme} className="px-0 pb-4" />
           <div className="w-full pt-1">{renderFormattedText(content)}</div>
         </div>
       ) : (
-        /* Layouts com Imagens: Header no topo, texto e fotos em seguida */
+        /* Layouts com Imagens: Header e Texto no topo (com padding), Mídia(s) sangradas na base */
         <>
-          <TemplateHeader profile={profile} themeConfig={theme} />
+          <div className="px-6 pt-6 pb-2 flex flex-col gap-3 shrink-0">
+            <TemplateHeader profile={profile} themeConfig={theme} />
+            <div className="w-full">{renderFormattedText(content)}</div>
+          </div>
 
-          <div className="flex-1 flex flex-col px-4 py-2 justify-start gap-3 relative">
-            {/* Bloco de Texto Superior */}
-            <div className="shrink-0">{renderFormattedText(content)}</div>
-
-            {/* Renderização de 1 Imagem com Zoom & Pan Interativo */}
+          {/* Área de Mídia (Sangrada até as laterais e base do slide) */}
+          <div className="flex-1 min-h-0 w-full flex flex-col justify-end overflow-hidden">
+            {/* Renderização de 1 Imagem Sangrada nas laterais e base */}
             {contentType === 'text_1_image' && (
               <InteractiveImageContainer
                 imageLayer={images[0]}
@@ -135,29 +136,41 @@ export const TwitterStyleSlide: React.FC<TwitterStyleSlideProps> = ({ slide, pro
                 onImageTransform={onImageTransform}
                 onUpdateMasks={onUpdateMasks}
                 onSelect={onSelectImage}
-                className="flex-1 min-h-[240px] max-h-[650px] w-full group"
+                className="w-full h-full flex-1 group"
                 cardBg={theme.cardBg}
                 borderColor={theme.borderColor}
                 textSecondary={theme.textSecondary}
+                roundedClassName="rounded-t-2xl rounded-b-none border-x-0 border-b-0"
               />
             )}
 
-            {/* Renderização de 2 Imagens com Rótulos de Comparação (Antes / Depois) e Zoom & Pan Interativo */}
+            {/* Renderização de 2 Imagens Sangradas com Rótulos Flutuantes e Gap de 2px */}
             {contentType === 'text_2_images' && (() => {
               const label1 = slide.imageLabels?.[0] !== undefined ? slide.imageLabels[0] : (images[0]?.title !== undefined ? images[0].title : 'Antes');
               const label2 = slide.imageLabels?.[1] !== undefined ? slide.imageLabels[1] : (images[1]?.title !== undefined ? images[1].title : 'Depois');
+              const labelAlign = slide.imageLabelAlignment || 'left';
+              const badgePosClass =
+                labelAlign === 'center'
+                  ? 'left-1/2 -translate-x-1/2'
+                  : labelAlign === 'right'
+                  ? 'right-3 left-auto'
+                  : 'left-3';
 
               return (
                 <div
-                  className={`flex-1 min-h-0 w-full flex ${
-                    isHorizontal ? 'flex-row gap-2' : 'flex-col gap-2'
+                  className={`w-full h-full flex-1 flex ${
+                    isHorizontal ? 'flex-row gap-[2px]' : 'flex-col gap-[2px]'
                   }`}
+                  style={{ backgroundColor: theme.bg }}
                 >
-                  <div className="flex-1 min-h-0 h-full w-full flex flex-col relative group">
+                  {/* Imagem 1 */}
+                  <div className="flex-1 min-h-0 h-full w-full relative group flex flex-col">
                     {label1 && label1.trim() !== '' && (
-                      <span className="text-[11px] font-bold mb-1 block text-left shrink-0" style={{ color: theme.text }}>
-                        {label1}
-                      </span>
+                      <div className={`absolute top-3 ${badgePosClass} z-30 pointer-events-none transition-all duration-150`}>
+                        <span className="text-[11px] font-black px-2.5 py-1 rounded-md shadow-lg bg-white/95 text-slate-900 border border-slate-200/90 backdrop-blur-md">
+                          {label1}
+                        </span>
+                      </div>
                     )}
                     <InteractiveImageContainer
                       imageLayer={images[0]}
@@ -165,19 +178,27 @@ export const TwitterStyleSlide: React.FC<TwitterStyleSlideProps> = ({ slide, pro
                       onImageTransform={onImageTransform}
                       onUpdateMasks={onUpdateMasks}
                       onSelect={onSelectImage}
-                      className="flex-1 min-h-[120px] w-full group"
+                      className="w-full h-full flex-1 group"
                       fallbackText="Imagem 1"
                       cardBg={theme.cardBg}
                       borderColor={theme.borderColor}
                       textSecondary={theme.textSecondary}
+                      roundedClassName={
+                        isHorizontal
+                          ? 'rounded-tl-2xl rounded-tr-none rounded-b-none border-l-0 border-b-0 border-t-0'
+                          : 'rounded-t-2xl rounded-b-none border-x-0 border-t-0'
+                      }
                     />
                   </div>
 
-                  <div className="flex-1 min-h-0 h-full w-full flex flex-col relative group">
+                  {/* Imagem 2 */}
+                  <div className="flex-1 min-h-0 h-full w-full relative group flex flex-col">
                     {label2 && label2.trim() !== '' && (
-                      <span className="text-[11px] font-bold mb-1 block text-left shrink-0" style={{ color: theme.text }}>
-                        {label2}
-                      </span>
+                      <div className={`absolute top-3 ${badgePosClass} z-30 pointer-events-none transition-all duration-150`}>
+                        <span className="text-[11px] font-black px-2.5 py-1 rounded-md shadow-lg bg-white/95 text-slate-900 border border-slate-200/90 backdrop-blur-md">
+                          {label2}
+                        </span>
+                      </div>
                     )}
                     <InteractiveImageContainer
                       imageLayer={images[1]}
@@ -185,11 +206,16 @@ export const TwitterStyleSlide: React.FC<TwitterStyleSlideProps> = ({ slide, pro
                       onImageTransform={onImageTransform}
                       onUpdateMasks={onUpdateMasks}
                       onSelect={onSelectImage}
-                      className="flex-1 min-h-[120px] w-full group"
+                      className="w-full h-full flex-1 group"
                       fallbackText="Imagem 2"
                       cardBg={theme.cardBg}
                       borderColor={theme.borderColor}
                       textSecondary={theme.textSecondary}
+                      roundedClassName={
+                        isHorizontal
+                          ? 'rounded-tr-2xl rounded-tl-none rounded-b-none border-r-0 border-b-0 border-t-0'
+                          : 'rounded-none border-x-0 border-b-0 border-t-0'
+                      }
                     />
                   </div>
                 </div>

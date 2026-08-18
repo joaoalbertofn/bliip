@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { UserProfile, PlannedContentIdea, Slide, LayoutStyle, Carousel } from '@/types/carousel';
+import { UserProfile, PlannedContentIdea, Slide, LayoutStyle, ContentType, Carousel } from '@/types/carousel';
 import { loadPlannedContentIdeas, savePlannedContentIdeas, loadChatHistory, saveChatHistory } from '@/lib/storage';
 import { createSlide, formatSmartSlideText, detectComparisonLabels } from '@/lib/templates';
 import { SlideCanvas } from './SlideCanvas';
@@ -28,6 +28,10 @@ import {
   Mic,
   MicOff,
   Camera,
+  Heart,
+  MessageCircle,
+  Bookmark,
+  MoreHorizontal,
 } from 'lucide-react';
 import { extractUserContentContext } from '@/lib/contextExtractor';
 import { useSpeechRecognition } from '@/hooks/useSpeechRecognition';
@@ -182,8 +186,17 @@ const getSlidesForIdea = (idea: PlannedContentIdea, profile: UserProfile, carous
 
   if (idea.slidesContent && idea.slidesContent.length > 0) {
     idea.slidesContent.forEach((sc, idx) => {
-      const isComparisonSlide = isComparisonTopic && (idx === 1 || style === 'comparison');
-      const contentType = isComparisonSlide ? 'text_2_images' : 'text_1_image';
+      const isExplicitComparison =
+        sc.contentType === 'text_2_images' ||
+        (sc.imageDescription && (
+          sc.imageDescription.toLowerCase().includes('antes') ||
+          sc.imageDescription.toLowerCase().includes('duas fotos') ||
+          sc.imageDescription.toLowerCase().includes('2 fotos') ||
+          sc.imageDescription.toLowerCase().includes('imagem 1')
+        ));
+
+      const isComparisonSlide = isExplicitComparison || (isComparisonTopic && (idx === 1 || style === 'comparison'));
+      const contentType: ContentType = isComparisonSlide ? 'text_2_images' : (sc.contentType || 'text_1_image');
       const slideStyle: LayoutStyle = isComparisonSlide ? 'comparison' : 'twitter';
 
       const s = createSlide(contentType, slideStyle);
@@ -269,6 +282,11 @@ export const ContentPlanner: React.FC<ContentPlannerProps> = ({
   // Estados para Modal de Pré-Visualização (Ao Clicar no Card)
   const [previewIdea, setPreviewIdea] = useState<{ idea: PlannedContentIdea; slides: Slide[] } | null>(null);
   const [previewSlideIdx, setPreviewSlideIdx] = useState<number>(0);
+
+  // Estados para navegação de slide e colapso de legenda individual em cada card do chat
+  const [cardSlideIndexMap, setCardSlideIndexMap] = useState<Record<string, number>>({});
+  const [expandedCaptionMap, setExpandedCaptionMap] = useState<Record<string, boolean>>({});
+  const [copiedCaptionCardId, setCopiedCaptionCardId] = useState<string | null>(null);
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const baseInputRef = useRef('');
@@ -768,73 +786,240 @@ Como posso te ajudar hoje? Solicite sugestões de conteúdo e você poderá **ar
                       </p>
 
                       {/* Container dos Cards com DOBRO da altura para fácil navegação */}
-                      <div className="flex flex-col gap-4 max-h-[680px] overflow-y-auto scrollbar-thin pr-1">
-                        {planToDisplay.map((varItem, idx) => (
-                          <div
-                            key={varItem.id || `var_${idx}`}
-                            draggable={true}
-                            onDragStart={(e) => handleDragStart(varItem, e)}
-                            className="bg-slate-900 border border-slate-700/90 hover:border-purple-500 rounded-2xl p-4 flex flex-col gap-3 transition cursor-grab active:cursor-grabbing group shadow-md hover:shadow-glow relative select-none"
-                          >
-                            <div className="flex items-start justify-between gap-3">
-                              <div className="flex items-center gap-2.5">
-                                <div className="p-2 bg-purple-500/20 rounded-xl text-purple-300 group-hover:bg-purple-600 group-hover:text-white transition">
-                                  <GripVertical className="w-4.5 h-4.5" />
+                      <div className="flex flex-col gap-4 max-h-[720px] overflow-y-auto scrollbar-thin pr-1">
+                        {planToDisplay.map((varItem, idx) => {
+                          const cardId = varItem.id || `var_${idx}`;
+                          const slides = getSlidesForIdea(varItem, profile, carousels);
+                          const currentSlideIdx = cardSlideIndexMap[cardId] || 0;
+                          const isCaptionExpanded = expandedCaptionMap[cardId] ?? true;
+
+                          return (
+                            <div
+                              key={cardId}
+                              draggable={true}
+                              onDragStart={(e) => handleDragStart(varItem, e)}
+                              className="bg-slate-900 border border-slate-700/90 hover:border-purple-500 rounded-2xl p-4 flex flex-col gap-3.5 transition cursor-grab active:cursor-grabbing group shadow-md hover:shadow-glow relative select-none"
+                            >
+                              {/* Header do Card com Titulo e Contagem de Slides */}
+                              <div className="flex items-start justify-between gap-3">
+                                <div className="flex items-center gap-2.5 min-w-0">
+                                  <div className="p-2 bg-purple-500/20 rounded-xl text-purple-300 group-hover:bg-purple-600 group-hover:text-white transition shrink-0">
+                                    <GripVertical className="w-4.5 h-4.5" />
+                                  </div>
+                                  <h4 className="text-sm font-black text-white leading-tight truncate">
+                                    {varItem.title}
+                                  </h4>
                                 </div>
-                                <h4 className="text-sm font-black text-white leading-tight">
-                                  {varItem.title}
-                                </h4>
-                              </div>
-                              <span className="text-xs bg-slate-800 text-indigo-300 font-mono px-2.5 py-1 rounded-lg shrink-0 border border-slate-700 font-bold">
-                                {varItem.slidesContent?.length || varItem.recommendedSlideCount || 4} slides
-                              </span>
-                            </div>
-
-                            {varItem.description && (
-                              <p className="text-xs text-slate-300 italic font-medium leading-relaxed bg-slate-950/60 p-2.5 rounded-xl border border-slate-800/80">
-                                {varItem.description}
-                              </p>
-                            )}
-
-                            {/* Exibição detalhada e espaçosa slide a slide */}
-                            {varItem.slidesContent && varItem.slidesContent.length > 0 && (
-                              <div className="bg-slate-950 p-3 rounded-xl border border-slate-800 flex flex-col gap-2 text-xs text-slate-300">
-                                <span className="text-[10px] font-bold text-purple-300 uppercase tracking-wider flex items-center gap-1.5">
-                                  <FileText className="w-3.5 h-3.5 text-purple-400" />
-                                  <span>Roteiro Completo dos Slides ({varItem.slidesContent.length}):</span>
+                                <span className="text-xs bg-slate-800 text-indigo-300 font-mono px-2.5 py-1 rounded-lg shrink-0 border border-slate-700 font-bold">
+                                  {slides.length} slides
                                 </span>
-                                <div className="flex flex-col gap-2 max-h-[320px] overflow-y-auto scrollbar-thin">
-                                  {varItem.slidesContent.map((slide, sIdx) => (
-                                    <div key={sIdx} className="bg-slate-900/90 p-2.5 rounded-xl border border-slate-800 flex flex-col gap-1">
-                                      <span className="font-bold text-indigo-300 text-xs">
-                                        {slide.title || `Slide ${sIdx + 1}`}:
-                                      </span>
-                                      <p className="text-slate-100 italic leading-snug font-medium">
-                                        "{slide.bodyText}"
-                                      </p>
+                              </div>
+
+                              {varItem.description && (
+                                <p className="text-xs text-slate-300 italic font-medium leading-relaxed bg-slate-950/60 p-2.5 rounded-xl border border-slate-800/80">
+                                  {varItem.description}
+                                </p>
+                              )}
+
+                              {/* MOCKUP DO INSTAGRAM FEED PREVIEW (MOCKUP REALISTA DO INSTAGRAM FEED SEM ESPAÇO MORTO) */}
+                              <div className="w-full bg-slate-950 border border-slate-800 rounded-3xl overflow-hidden flex flex-col shadow-2xl transition-all">
+                                {/* Cabeçalho do Perfil do Instagram */}
+                                <div className="flex items-center justify-between px-3.5 py-2.5 border-b border-slate-800/80 bg-slate-900/90">
+                                  <div className="flex items-center gap-2">
+                                    <div className="w-7 h-7 rounded-full p-[1.5px] bg-gradient-to-tr from-amber-500 via-rose-500 to-purple-600">
+                                      <img
+                                        src={profile?.avatarUrl || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=200'}
+                                        alt={profile?.name || 'Perfil'}
+                                        className="w-full h-full rounded-full object-cover border border-slate-900"
+                                      />
                                     </div>
-                                  ))}
+                                    <div className="flex flex-col">
+                                      <span className="text-[11px] font-bold text-slate-100 leading-tight">
+                                        {profile?.handle || profile?.name?.toLowerCase().replace(/\s+/g, '') || '@criador'}
+                                      </span>
+                                      <span className="text-[9px] text-slate-400">Instagram Feed Preview</span>
+                                    </div>
+                                  </div>
+
+                                  <div className="flex items-center gap-2">
+                                    <span className="text-[10px] font-mono text-purple-300 bg-purple-950/80 px-2 py-0.5 rounded-md border border-purple-800 font-bold">
+                                      Slide {currentSlideIdx + 1}/{slides.length}
+                                    </span>
+                                    <button
+                                      type="button"
+                                      onClick={() => handleOpenPreview(varItem)}
+                                      className="text-slate-400 hover:text-white text-[10px] font-semibold px-2 py-0.5 bg-slate-800/80 hover:bg-slate-700 rounded-lg border border-slate-700 transition"
+                                      title="Ampliar em tela cheia"
+                                    >
+                                      Ampliar 🔍
+                                    </button>
+                                  </div>
+                                </div>
+
+                                {/* SLIDE VISUAL COMPACTO SEM ESPAÇO MORTO / ZERO LETTERBOXING */}
+                                <div className="relative w-full h-[340px] bg-slate-950 flex items-center justify-center overflow-hidden border-b border-slate-800/80">
+                                  {slides[currentSlideIdx] && (
+                                    <div className="transform scale-[0.57] sm:scale-[0.59] transition-all origin-center">
+                                      <SlideCanvas
+                                        slide={slides[currentSlideIdx]}
+                                        profile={profile}
+                                        aspectRatio="4:5"
+                                      />
+                                    </div>
+                                  )}
+
+                                  {/* Setas de Navegação de Slides */}
+                                  {slides.length > 1 && (
+                                    <>
+                                      <button
+                                        type="button"
+                                        onClick={(e) => {
+                                          e.stopPropagation();
+                                          setCardSlideIndexMap((prev) => ({
+                                            ...prev,
+                                            [cardId]: Math.max(0, currentSlideIdx - 1),
+                                          }));
+                                        }}
+                                        disabled={currentSlideIdx === 0}
+                                        className="absolute left-2 top-1/2 -translate-y-1/2 w-8 h-8 rounded-full bg-slate-900/90 hover:bg-purple-600 disabled:opacity-20 text-white flex items-center justify-center shadow-xl border border-slate-700/80 z-20 transition"
+                                      >
+                                        <ChevronLeft className="w-5 h-5" />
+                                      </button>
+                                      <button
+                                        type="button"
+                                        onClick={(e) => {
+                                          e.stopPropagation();
+                                          setCardSlideIndexMap((prev) => ({
+                                            ...prev,
+                                            [cardId]: Math.min(slides.length - 1, currentSlideIdx + 1),
+                                          }));
+                                        }}
+                                        disabled={currentSlideIdx === slides.length - 1}
+                                        className="absolute right-2 top-1/2 -translate-y-1/2 w-8 h-8 rounded-full bg-slate-900/90 hover:bg-purple-600 disabled:opacity-20 text-white flex items-center justify-center shadow-xl border border-slate-700/80 z-20 transition"
+                                      >
+                                        <ChevronRight className="w-5 h-5" />
+                                      </button>
+                                    </>
+                                  )}
+                                </div>
+
+                                {/* RECOMENDAÇÃO DE FOTO DO SLIDE ATUAL (SE HOUVER) */}
+                                {varItem.slidesContent?.[currentSlideIdx]?.imageDescription && (
+                                  <div className="px-3 py-1.5 bg-indigo-950/60 border-t border-b border-indigo-900/40 text-[10px] text-indigo-200 flex items-center gap-1.5">
+                                    <Camera className="w-3.5 h-3.5 text-indigo-400 shrink-0" />
+                                    <span className="font-semibold leading-tight">
+                                      {varItem.slidesContent[currentSlideIdx].imageDescription}
+                                    </span>
+                                  </div>
+                                )}
+
+                                {/* BARRA DE AÇÕES DO INSTAGRAM (LIKES, PONTINHOS DO CARROSSEL) */}
+                                <div className="flex items-center justify-between px-3.5 py-2 bg-slate-900 border-t border-slate-800/60">
+                                  <div className="flex items-center gap-3 text-slate-300">
+                                    <Heart className="w-4 h-4 hover:text-red-500 cursor-pointer transition" />
+                                    <MessageCircle className="w-4 h-4 hover:text-indigo-400 cursor-pointer transition" />
+                                    <Send className="w-4 h-4 hover:text-purple-400 cursor-pointer transition" />
+                                  </div>
+
+                                  {/* Pontinhos Indicadores do Carrossel */}
+                                  {slides.length > 1 && (
+                                    <div className="flex items-center gap-1">
+                                      {slides.map((_, sIdx) => (
+                                        <span
+                                          key={sIdx}
+                                          className={`w-1.5 h-1.5 rounded-full transition-all ${
+                                            sIdx === currentSlideIdx ? 'bg-purple-400 scale-125' : 'bg-slate-700'
+                                          }`}
+                                        />
+                                      ))}
+                                    </div>
+                                  )}
+
+                                  <Bookmark className="w-4 h-4 text-slate-400 hover:text-white cursor-pointer transition" />
+                                </div>
+
+                                {/* NATIVE INSTAGRAM CAPTION SECTION (LEGENDA GLOBAL COM HASHTAGS DIRETO ABAIXO DO POST) */}
+                                <div className="px-3.5 pb-3.5 pt-1.5 flex flex-col gap-2 bg-slate-900 border-t border-slate-800/40">
+                                  <div className="flex items-center justify-between">
+                                    <button
+                                      type="button"
+                                      onClick={() => setExpandedCaptionMap((prev) => ({ ...prev, [cardId]: !isCaptionExpanded }))}
+                                      className="flex items-center gap-1.5 text-purple-300 hover:text-purple-200 text-[11px] font-bold"
+                                    >
+                                      <FileText className="w-3.5 h-3.5 text-purple-400" />
+                                      <span>Legenda Global da Publicação</span>
+                                      <span className="text-[10px] text-purple-400/80 font-mono">
+                                        ({isCaptionExpanded ? '🔼 Ocultar' : '🔽 Exibir'})
+                                      </span>
+                                    </button>
+
+                                    {varItem.caption && (
+                                      <button
+                                        type="button"
+                                        onClick={() => {
+                                          navigator.clipboard.writeText(varItem.caption || '');
+                                          setCopiedCaptionCardId(cardId);
+                                          setTimeout(() => setCopiedCaptionCardId(null), 2000);
+                                        }}
+                                        className="text-[10px] font-bold text-slate-300 hover:text-white bg-slate-800 hover:bg-slate-700 border border-slate-700 px-2 py-0.5 rounded-lg transition flex items-center gap-1 shrink-0"
+                                        title="Copiar legenda completa"
+                                      >
+                                        {copiedCaptionCardId === cardId ? (
+                                          <>
+                                            <Check className="w-3 h-3 text-emerald-400" />
+                                            <span className="text-emerald-300">Copiado!</span>
+                                          </>
+                                        ) : (
+                                          <>
+                                            <Copy className="w-3 h-3 text-purple-400" />
+                                            <span>Copiar Legenda</span>
+                                          </>
+                                        )}
+                                      </button>
+                                    )}
+                                  </div>
+
+                                {isCaptionExpanded && (
+                                  <div className="bg-slate-950/80 border border-slate-800/90 p-3 rounded-xl text-xs text-slate-200 font-sans leading-relaxed max-h-[160px] overflow-y-auto scrollbar-thin select-text whitespace-pre-wrap">
+                                    <strong className="text-white font-bold mr-1.5">
+                                      {profile?.handle || profile?.name?.toLowerCase().replace(/\s+/g, '') || '@criador'}
+                                    </strong>
+                                    {varItem.caption ? (
+                                      varItem.caption.split(/(\s+)/).map((part, pIdx) => (
+                                        part.startsWith('#') ? (
+                                          <span key={pIdx} className="text-sky-400 font-medium hover:underline cursor-pointer">
+                                            {part}
+                                          </span>
+                                        ) : part
+                                      ))
+                                    ) : (
+                                      <span className="text-slate-500 italic">Legenda global sendo gerada pela IA...</span>
+                                    )}
+                                  </div>
+                                )}
                                 </div>
                               </div>
-                            )}
 
-                            <div className="flex items-center justify-between pt-2 border-t border-slate-800 text-xs">
-                              <span className="text-slate-400 font-mono flex items-center gap-1.5">
-                                <Move className="w-3.5 h-3.5 text-purple-400 animate-pulse" />
-                                <span>Arraste para o dia livre</span>
-                              </span>
+                              {/* RODAPÉ DO CARD: DRAG & AGENDAR EM 1º VAGO */}
+                              <div className="flex items-center justify-between pt-2 border-t border-slate-800 text-xs">
+                                <span className="text-slate-400 font-mono flex items-center gap-1.5 text-[11px]">
+                                  <Move className="w-3.5 h-3.5 text-purple-400 animate-pulse" />
+                                  <span>Arraste para o dia livre</span>
+                                </span>
 
-                              <button
-                                onClick={() => handleQuickScheduleFirstEmptyDay(varItem)}
-                                className="px-3 py-1.5 bg-purple-900/70 hover:bg-purple-600 text-purple-100 hover:text-white rounded-xl text-xs font-bold transition flex items-center gap-1.5 border border-purple-700/60 shadow-sm"
-                                title="Agendar no primeiro dia livre do calendário"
-                              >
-                                <Plus className="w-3.5 h-3.5" />
-                                <span>Agendar em 1º vago</span>
-                              </button>
+                                <button
+                                  type="button"
+                                  onClick={() => handleQuickScheduleFirstEmptyDay(varItem)}
+                                  className="px-3 py-1.5 bg-purple-900/70 hover:bg-purple-600 text-purple-100 hover:text-white rounded-xl text-xs font-bold transition flex items-center gap-1.5 border border-purple-700/60 shadow-sm"
+                                  title="Agendar no primeiro dia livre do calendário"
+                                >
+                                  <Plus className="w-3.5 h-3.5" />
+                                  <span>Agendar em 1º vago</span>
+                                </button>
+                              </div>
                             </div>
-                          </div>
-                        ))}
+                          );
+                        })}
                       </div>
                     </div>
                   )}

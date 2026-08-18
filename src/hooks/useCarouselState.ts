@@ -554,6 +554,10 @@ export function useCarouselState(profile: UserProfile) {
     updateActiveSlide((prev) => ({ ...prev, imageLayout: orientation }));
   };
 
+  const handleUpdateImageLabelAlignment = (alignment: 'left' | 'center' | 'right') => {
+    updateActiveSlide((prev) => ({ ...prev, imageLabelAlignment: alignment }));
+  };
+
   const handleAddSlide = () => {
     if (!activeCarousel || !canAddSlide(activeCarousel.slides.length)) return;
     const refSlide = activeSlide || activeCarousel.slides[activeCarousel.slides.length - 1];
@@ -795,9 +799,18 @@ export function useCarouselState(profile: UserProfile) {
 
     if (idea.slidesContent && idea.slidesContent.length > 0) {
       idea.slidesContent.forEach((sc, idx) => {
-        const isComparisonSlide = isComparisonTopic && (idx === 1 || idea.recommendedStyle === 'comparison');
-        const contentType: ContentType = isComparisonSlide ? 'text_2_images' : 'text_1_image';
-        const style: LayoutStyle = 'twitter';
+        const isExplicitComparison =
+          sc.contentType === 'text_2_images' ||
+          (sc.imageDescription && (
+            sc.imageDescription.toLowerCase().includes('antes') ||
+            sc.imageDescription.toLowerCase().includes('duas fotos') ||
+            sc.imageDescription.toLowerCase().includes('2 fotos') ||
+            sc.imageDescription.toLowerCase().includes('imagem 1')
+          ));
+
+        const isComparisonSlide = isExplicitComparison || (isComparisonTopic && (idx === 1 || idea.recommendedStyle === 'comparison'));
+        const contentType: ContentType = isComparisonSlide ? 'text_2_images' : (sc.contentType || 'text_1_image');
+        const style: LayoutStyle = isComparisonSlide ? 'comparison' : 'twitter';
 
         const s = createSlide(contentType, style);
         if (prefs.theme) s.theme = prefs.theme;
@@ -870,7 +883,7 @@ export function useCarouselState(profile: UserProfile) {
       status: 'draft',
       aspectRatio: prefs.aspectRatio || '4:5',
       slides: slides,
-      caption: idea.description,
+      caption: idea.caption || idea.description,
       selectedChannels: ['instagram', 'linkedin'],
     };
 
@@ -953,6 +966,7 @@ export function useCarouselState(profile: UserProfile) {
     handleUpdateTitleAlignment,
     handleUpdateNewsTitle,
     handleUpdateImageLayout,
+    handleUpdateImageLabelAlignment,
     handleCreateCarouselFromPresetModel,
     savedSlideTemplates,
     handleSaveSlideAsTemplate,

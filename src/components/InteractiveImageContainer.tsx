@@ -14,6 +14,7 @@ interface InteractiveImageContainerProps {
   cardBg?: string;
   borderColor?: string;
   textSecondary?: string;
+  roundedClassName?: string;
 }
 
 export const InteractiveImageContainer: React.FC<InteractiveImageContainerProps> = ({
@@ -28,6 +29,7 @@ export const InteractiveImageContainer: React.FC<InteractiveImageContainerProps>
   cardBg = '#f8fafc',
   borderColor = '#e2e8f0',
   textSecondary = '#64748b',
+  roundedClassName = 'rounded-xl',
 }) => {
   const wrapperRef = useRef<HTMLDivElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -554,7 +556,7 @@ export const InteractiveImageContainer: React.FC<InteractiveImageContainerProps>
         onDragOver={handleDragOver}
         onDragLeave={handleDragLeave}
         onDrop={handleDrop}
-        className={`w-full h-full flex items-center justify-center overflow-hidden rounded-xl relative border select-none transition-all ${
+        className={`w-full h-full flex items-center justify-center overflow-hidden relative border select-none transition-all ${roundedClassName} ${
           isDropTarget
             ? 'ring-4 ring-indigo-500 border-indigo-500 scale-[1.02] z-30 shadow-2xl'
             : isInteractive
@@ -584,7 +586,7 @@ export const InteractiveImageContainer: React.FC<InteractiveImageContainerProps>
               loop
               muted
               playsInline
-              className="w-full h-full object-cover rounded-xl transition-all duration-75 pointer-events-none"
+              className={`w-full h-full object-cover transition-all duration-75 pointer-events-none ${roundedClassName}`}
               style={{
                 objectPosition: `${posX}% ${posY}%`,
                 transform: `scale(${scale})`,
@@ -596,7 +598,7 @@ export const InteractiveImageContainer: React.FC<InteractiveImageContainerProps>
               src={url}
               alt={`Foto #${imageIndex + 1}`}
               draggable={false}
-              className="w-full h-full object-cover rounded-xl transition-all duration-75 pointer-events-none"
+              className={`w-full h-full object-cover transition-all duration-75 pointer-events-none ${roundedClassName}`}
               style={{
                 objectPosition: `${posX}% ${posY}%`,
                 transform: `scale(${scale})`,

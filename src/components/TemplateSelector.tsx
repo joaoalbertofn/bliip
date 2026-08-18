@@ -121,43 +121,6 @@ export const TemplateSelector: React.FC<TemplateSelectorProps> = ({
           })}
         </div>
 
-        {/* SELETOR DE ORIENTAÇÃO DAS MÍDIAS (Horizontal vs Vertical) */}
-        {canChangeOrientation(currentLayoutStyle, currentContentType) && (
-          <div className="mt-2.5 pt-2.5 border-t border-slate-800/80 flex flex-col gap-1.5">
-            <label className="text-[11px] font-semibold text-slate-300 flex items-center justify-between">
-              <span>Orientação das Mídias</span>
-              <span className="text-[10px] font-mono text-indigo-400">
-                {currentImageLayout === 'horizontal' ? 'Lado a Lado' : 'Empilhado'}
-              </span>
-            </label>
-
-            <div className="grid grid-cols-2 gap-1.5">
-              <button
-                type="button"
-                onClick={() => onSelectImageLayout?.('vertical')}
-                className={`py-1.5 px-2 rounded-lg border text-xs font-bold transition flex items-center justify-center gap-1.5 ${
-                  currentImageLayout !== 'horizontal'
-                    ? 'bg-indigo-600 text-white border-indigo-500 shadow-sm'
-                    : 'bg-slate-900 text-slate-400 border-slate-800 hover:text-slate-200'
-                }`}
-              >
-                <span>📱 Vertical</span>
-              </button>
-
-              <button
-                type="button"
-                onClick={() => onSelectImageLayout?.('horizontal')}
-                className={`py-1.5 px-2 rounded-lg border text-xs font-bold transition flex items-center justify-center gap-1.5 ${
-                  currentImageLayout === 'horizontal'
-                    ? 'bg-indigo-600 text-white border-indigo-500 shadow-sm'
-                    : 'bg-slate-900 text-slate-400 border-slate-800 hover:text-slate-200'
-                }`}
-              >
-                <span>🖥️ Horizontal</span>
-              </button>
-            </div>
-          </div>
-        )}
       </div>
     </div>
   );

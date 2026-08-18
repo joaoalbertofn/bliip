@@ -80,7 +80,9 @@ import {
   AlignLeft,
   AlignCenter,
   AlignRight,
-  Highlighter
+  Highlighter,
+  Tag,
+  ChevronDown
 } from 'lucide-react';
 
 export default function BliipApp() {
@@ -92,6 +94,7 @@ export default function BliipApp() {
   const [selectedImageIndex, setSelectedImageIndex] = useState<number>(0);
   const [canvasZoom, setCanvasZoom] = useState<'fit' | number>('fit');
   const [autoFitScale, setAutoFitScale] = useState<number>(1);
+  const [isLabelPopoverOpen, setIsLabelPopoverOpen] = useState(false);
 
   // Referência do editor de texto ativo no Canvas & campo em foco
   const activeEditorRef = useRef<InlineCanvasEditorRef>(null);
@@ -237,6 +240,7 @@ export default function BliipApp() {
     handleUpdateTitleAlignment,
     handleUpdateNewsTitle,
     handleUpdateImageLayout,
+    handleUpdateImageLabelAlignment,
     savedSlideTemplates,
     handleSaveSlideAsTemplate,
     handleDeleteSavedTemplate,
@@ -502,37 +506,7 @@ export default function BliipApp() {
                   onSelectImageLayout={handleUpdateImageLayout}
                 />
 
-                {/* RÓTULOS DE MÍDIAS SE HOUVER 2 MÍDIAS (ANTES / DEPOIS) */}
-                {activeSlide.contentType === 'text_2_images' && (
-                  <div className="flex flex-col gap-2 mt-4 pt-3 border-t border-slate-800/80">
-                    <label className="text-xs font-semibold text-slate-300 flex items-center justify-between">
-                      <span>Rótulos das Mídias de Comparação</span>
-                      <span className="text-[10px] text-slate-500 font-mono">(Limpar remove do slide)</span>
-                    </label>
-                    <div className="grid grid-cols-2 gap-2">
-                      <div>
-                        <span className="text-[10px] text-slate-400 font-medium block mb-1">Rótulo Mídia 1:</span>
-                        <input
-                          type="text"
-                          value={activeSlide.layers.images?.[0]?.title ?? 'Antes'}
-                          onChange={(e) => handleUpdateImageTitle(0, e.target.value)}
-                          placeholder="Antes"
-                          className="w-full bg-slate-950 border border-slate-700/80 rounded-lg px-2.5 py-1.5 text-white text-xs font-medium focus:outline-none focus:ring-1 focus:ring-indigo-500"
-                        />
-                      </div>
-                      <div>
-                        <span className="text-[10px] text-slate-400 font-medium block mb-1">Rótulo Mídia 2:</span>
-                        <input
-                          type="text"
-                          value={activeSlide.layers.images?.[1]?.title ?? 'Depois'}
-                          onChange={(e) => handleUpdateImageTitle(1, e.target.value)}
-                          placeholder="Depois"
-                          className="w-full bg-slate-950 border border-slate-700/80 rounded-lg px-2.5 py-1.5 text-white text-xs font-medium focus:outline-none focus:ring-1 focus:ring-indigo-500"
-                        />
-                      </div>
-                    </div>
-                  </div>
-                )}
+                {/* Fim do Seletor de Estilo e Conteúdo */}
               </CollapsibleSection>
 
               {/* SEÇÃO 3: Presets de Temas de Cores */}
@@ -578,7 +552,7 @@ export default function BliipApp() {
         {/* COLUNA 2: 🎯 Content Workspace (Painel Central: Header Full-Width + Canvas + Legenda Global + Slides) */}
         <main className="flex-1 bg-slate-950 flex flex-col justify-between overflow-hidden relative min-w-0">
           {/* SUB-HEADER SUPERIOR DE PONTA A PONTA (FULL-WIDTH 100% W) */}
-          <header className="w-full bg-slate-900 border-b border-slate-800 px-4 py-2 flex items-center justify-between shrink-0 z-20 shadow-md">
+          <header className="w-full min-w-0 bg-slate-900 border-b border-slate-800 px-4 py-2 flex items-center justify-between shrink-0 z-20 shadow-md gap-3 overflow-x-auto scrollbar-thin scrollbar-thumb-slate-800">
             {/* GRUPO A (Esquerda): Zoom da Tela & Visualização */}
             <div className="flex items-center gap-2 shrink-0">
               <ZoomIn className="w-4 h-4 text-slate-400" />
@@ -707,6 +681,129 @@ export default function BliipApp() {
                   </button>
                 ))}
               </div>
+
+              {/* Controles Contextuais de Mídia & Rótulos (Exibidos se o slide ativo tiver mídias) */}
+              {activeSlide?.contentType !== 'text_only' && (
+                <>
+                  <div className="w-px h-4 bg-slate-800 shrink-0" />
+
+                  {/* Orientação das 2 mídias (Vertical vs Horizontal) */}
+                  {activeSlide.contentType === 'text_2_images' && (
+                    <div className="flex items-center gap-1 bg-slate-950 p-0.5 rounded-lg border border-slate-800">
+                      <button
+                        type="button"
+                        onClick={() => handleUpdateImageLayout('vertical')}
+                        className={`px-2 py-1 text-xs font-bold rounded-md transition flex items-center gap-1 ${
+                          activeSlide.imageLayout !== 'horizontal'
+                            ? 'bg-indigo-600 text-white shadow-sm'
+                            : 'text-slate-400 hover:text-slate-200'
+                        }`}
+                        title="Mídias Empilhadas (Vertical)"
+                      >
+                        <span>📱 Vertical</span>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => handleUpdateImageLayout('horizontal')}
+                        className={`px-2 py-1 text-xs font-bold rounded-md transition flex items-center gap-1 ${
+                          activeSlide.imageLayout === 'horizontal'
+                            ? 'bg-indigo-600 text-white shadow-sm'
+                            : 'text-slate-400 hover:text-slate-200'
+                        }`}
+                        title="Mídias Lado a Lado (Horizontal)"
+                      >
+                        <span>🖥️ Horizontal</span>
+                      </button>
+                    </div>
+                  )}
+
+                  {/* Popover de Rótulos (Textos + Alinhamento) */}
+                  <div className="relative">
+                    <button
+                      type="button"
+                      onClick={() => setIsLabelPopoverOpen(!isLabelPopoverOpen)}
+                      className={`flex items-center gap-1.5 px-2.5 py-1 text-xs font-extrabold rounded-lg border transition active:scale-95 shadow-sm ${
+                        isLabelPopoverOpen
+                          ? 'bg-amber-500 text-amber-950 border-amber-400'
+                          : 'bg-slate-950 text-slate-200 border-slate-800 hover:bg-slate-800'
+                      }`}
+                      title="Configurar Textos e Alinhamento dos Rótulos das Mídias"
+                    >
+                      <Tag className="w-3.5 h-3.5 text-amber-400" />
+                      <span>Rótulos</span>
+                      <ChevronDown className="w-3 h-3 text-slate-400" />
+                    </button>
+
+                    {isLabelPopoverOpen && (
+                      <div className="absolute right-0 top-full mt-2 w-64 bg-slate-900 border border-slate-700/90 rounded-xl shadow-2xl p-3 z-50 flex flex-col gap-3 backdrop-blur-md animate-in fade-in zoom-in-95">
+                        <div className="flex items-center justify-between border-b border-slate-800 pb-2">
+                          <span className="text-xs font-bold text-white flex items-center gap-1.5">
+                            <Tag className="w-3.5 h-3.5 text-amber-400" />
+                            <span>Rótulos de Mídias</span>
+                          </span>
+                          <button
+                            type="button"
+                            onClick={() => setIsLabelPopoverOpen(false)}
+                            className="text-slate-400 hover:text-white text-xs font-bold px-1"
+                          >
+                            ✕
+                          </button>
+                        </div>
+
+                        {/* Inputs de Texto para Rótulo 1 e Rótulo 2 */}
+                        <div className="flex flex-col gap-2">
+                          <div>
+                            <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-1">Rótulo Mídia 1</label>
+                            <input
+                              type="text"
+                              value={activeSlide.imageLabels?.[0] ?? activeSlide.layers?.images?.[0]?.title ?? 'Antes'}
+                              onChange={(e) => handleUpdateImageTitle(0, e.target.value)}
+                              placeholder="Ex: Antes"
+                              className="w-full bg-slate-950 border border-slate-800 rounded-lg px-2.5 py-1.5 text-xs text-white focus:outline-none focus:border-indigo-500 font-medium"
+                            />
+                          </div>
+                          <div>
+                            <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-1">Rótulo Mídia 2</label>
+                            <input
+                              type="text"
+                              value={activeSlide.imageLabels?.[1] ?? activeSlide.layers?.images?.[1]?.title ?? 'Depois'}
+                              onChange={(e) => handleUpdateImageTitle(1, e.target.value)}
+                              placeholder="Ex: Depois"
+                              className="w-full bg-slate-950 border border-slate-800 rounded-lg px-2.5 py-1.5 text-xs text-white focus:outline-none focus:border-indigo-500 font-medium"
+                            />
+                          </div>
+                        </div>
+
+                        {/* Alinhamento dos Rótulos (Esquerda, Centro, Direita) */}
+                        <div className="flex flex-col gap-1.5 pt-1 border-t border-slate-800">
+                          <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Alinhamento do Rótulo</label>
+                          <div className="grid grid-cols-3 gap-1 bg-slate-950 p-1 rounded-lg border border-slate-800">
+                            {(['left', 'center', 'right'] as const).map((align) => {
+                              const isSelected = (activeSlide.imageLabelAlignment || 'left') === align;
+                              return (
+                                <button
+                                  key={align}
+                                  type="button"
+                                  onClick={() => handleUpdateImageLabelAlignment(align)}
+                                  className={`py-1 px-1.5 rounded-md text-[11px] font-extrabold flex items-center justify-center gap-1 transition ${
+                                    isSelected ? 'bg-indigo-600 text-white shadow-sm' : 'text-slate-400 hover:text-slate-200'
+                                  }`}
+                                  title={`Alinhar rótulo à ${align === 'left' ? 'Esquerda' : align === 'center' ? 'Centro' : 'Direita'}`}
+                                >
+                                  {align === 'left' && <AlignLeft className="w-3 h-3" />}
+                                  {align === 'center' && <AlignCenter className="w-3 h-3" />}
+                                  {align === 'right' && <AlignRight className="w-3 h-3" />}
+                                  <span className="capitalize">{align === 'left' ? 'Esq' : align === 'center' ? 'Centro' : 'Dir'}</span>
+                                </button>
+                              );
+                            })}
+                          </div>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </>
+              )}
             </div>
           </header>
 

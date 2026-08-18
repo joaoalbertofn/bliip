@@ -69,6 +69,7 @@ export type Slide = {
   title?: string;
   newsTitle?: string; // Manchete/Título de Notícia para layouts como news_article
   imageLabels?: string[]; // Rótulos para comparação (ex: ['Antes', 'Depois'])
+  imageLabelAlignment?: "left" | "center" | "right"; // Alinhamento dos rótulos (esquerda, centro, direita)
   fontSize?: number; // Tamanho da fonte em px (ex: 14 a 48)
   textAlignment?: "left" | "center" | "right"; // Alinhamento do texto principal
   titleAlignment?: "left" | "center" | "right"; // Alinhamento do título da notícia

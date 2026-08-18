@@ -1,7 +1,6 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { Carousel, UserProfile, SocialChannel } from '@/types/carousel';
-import { Instagram, Linkedin, Facebook, Hash, Smile, Send, AlertCircle, Link as LinkIcon, Sparkles } from 'lucide-react';
-import { generateCaptionWithAI } from '@/lib/captionAI';
+import { Instagram, Linkedin, Facebook, Hash, Smile, Send, AlertCircle, Link as LinkIcon } from 'lucide-react';
 
 interface PostCaptionEditorProps {
   caption: string;
@@ -26,65 +25,6 @@ export const PostCaptionEditor: React.FC<PostCaptionEditorProps> = ({
   carousel,
   profile,
 }) => {
-  const [isGeneratingCaption, setIsGeneratingCaption] = useState(false);
-
-  const handleGenerateCaption = async () => {
-    setIsGeneratingCaption(true);
-    try {
-      // Extrair textos dos slides
-      const slideTexts: string[] = [];
-      const mediaUrls: string[] = [];
-
-      if (carousel?.slides) {
-        carousel.slides.forEach((slide, index) => {
-          const slideNum = index + 1;
-          const slideItems: string[] = [];
-
-          if (slide.title) slideItems.push(`Título/Gancho: "${slide.title}"`);
-          if (slide.newsTitle) slideItems.push(`Manchete: "${slide.newsTitle}"`);
-
-          (slide.layers?.text || []).forEach((t) => {
-            const cleanText = t.content?.replace(/<[^>]*>/g, '').trim();
-            if (cleanText) {
-              const roleLabel = t.role ? ` (${t.role})` : '';
-              slideItems.push(`Texto${roleLabel}: "${cleanText}"`);
-            }
-          });
-
-          if (slideItems.length > 0) {
-            slideTexts.push(`--- SLIDE ${slideNum} ---\n${slideItems.join('\n')}`);
-          }
-
-          // Coletar apenas URLs de imagens reais/públicas ou data URLs (ignorando blob: locais)
-          (slide.layers?.images || []).forEach((img) => {
-            const url = img.source?.url;
-            if (url && typeof url === 'string' && (url.startsWith('http://') || url.startsWith('https://') || url.startsWith('data:image/'))) {
-              mediaUrls.push(url);
-            }
-          });
-        });
-      }
-
-      const contextText = slideTexts.join('\n\n') || carousel?.name || 'Conteúdo visual do carrossel';
-
-      const generated = await generateCaptionWithAI({
-        contentType: 'carousel',
-        contextText,
-        mediaUrls,
-        businessProfile: profile?.businessProfile,
-        userProfile: profile,
-      });
-
-      if (generated) {
-        onCaptionChange(generated);
-      }
-    } catch (err: any) {
-      console.error('Erro ao gerar legenda com IA:', err);
-      alert(`Não foi possível gerar a legenda com IA: ${err?.message || 'Erro desconhecido.'}`);
-    } finally {
-      setIsGeneratingCaption(false);
-    }
-  };
   const isInstagramConnected = isBufferConnected && connectedChannels.includes('instagram');
   const isLinkedinConnected = isBufferConnected && connectedChannels.includes('linkedin');
   const isFacebookConnected = isBufferConnected && connectedChannels.includes('facebook');
@@ -226,21 +166,9 @@ export const PostCaptionEditor: React.FC<PostCaptionEditorProps> = ({
       <div className="flex flex-col gap-2">
         <div className="flex items-center justify-between text-xs font-semibold text-slate-300">
           <span>Legenda Global da Publicação</span>
-          <div className="flex items-center gap-2">
-            <button
-              type="button"
-              onClick={handleGenerateCaption}
-              disabled={isGeneratingCaption}
-              className="px-2.5 py-1 text-[11px] font-extrabold bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-600 hover:from-indigo-500 hover:to-pink-500 text-white rounded-lg border border-indigo-400/40 shadow-md transition active:scale-95 flex items-center gap-1.5 disabled:opacity-50"
-              title="Gerar automaticamente uma legenda de alta conversão usando IA (Gemini multimodal)"
-            >
-              <Sparkles className={`w-3.5 h-3.5 text-amber-300 ${isGeneratingCaption ? 'animate-spin' : ''}`} />
-              <span>{isGeneratingCaption ? 'Gerando...' : 'Gerar com IA'}</span>
-            </button>
-            <span className="font-mono text-[11px] text-slate-400">
-              {caption.length} caracteres
-            </span>
-          </div>
+          <span className="font-mono text-[11px] text-slate-400">
+            {caption.length} caracteres
+          </span>
         </div>
 
         <textarea
